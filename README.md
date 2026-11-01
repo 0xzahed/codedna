@@ -239,35 +239,55 @@ curl -s http://localhost:8080/api/scans/latest/export?format=c4 > c4_components.
 
 ---
 
-# 5. Generate comprehensive executive report
-codedna report --format markdown
-codedna report --format json --out report.json
+## 🖥️ Web Dashboard Intelligence Suite
 
-# 6. Start API server and interactive Web Dashboard
-codedna serve --port 8080
+When running `codedna serve`, access the interactive UI at **`http://localhost:8080`**. CodeDNA provides 9 specialized intelligence views:
 
-# 7. Watch repository for file modifications and live-index
-codedna watch .
+### 1. 🌐 System Overview & Health Dashboard (`/`)
+* **Aggregate Health Score (0–100):** Real-time algorithmically weighted health rating calculated from circular cycles, cyclomatic hotspots, dead code volume, and architectural layer violations.
+* **Telemetry Metrics:** Instant inventory of total source files, parsed AST symbols, functions, classes/structs, and resolved dependency edges.
+* **Top Hotspot Indicators:** Surface complex, high-churn functions that pose architectural maintenance risk.
 
-# 8. Enable runtime instrumentation adapter
-codedna runtime enable --lang python
-```
+### 2. 🧬 Interactive Living DNA Graph (`/graph/`)
+* **React Flow Topology Engine:** Hardware-accelerated canvas with smooth zooming, panning, auto-centering, minimap navigation, and fuzzy symbol search.
+* **Architectural Cluster Grouping:** Intelligent spatial layout organizing nodes by physical directory hierarchy and package domains.
+* **Multi-Color Edge Classification:**
+  * 🟪 **Violet Edges:** Direct AST module imports (`import "..."` / `require`).
+  * 🟩 **Green Edges:** Semantic function/method invocation calls across files.
+  * 🟦 **Sky Blue Edges:** Cross-service REST API calls linking frontend actions to backend route handlers.
+* **Slide-over Source Drawer:** Click any node to instantly view the actual source file with syntax highlighting, exact line offset, and symbol caller details.
+* **Live Mermaid & C4 Export:** One-click modal to copy or download production Mermaid flowcharts and C4 component diagrams.
 
----
+### 3. 📂 Repository Explorer & Source Code Inspector (`/repo/`)
+* **Two-Pane Explorer:** Fast hierarchical directory file tree with file sizes and language detection badges.
+* **Deep Code Inspector:** Syntax-highlighted code viewer with line numbers, Git commit author annotations, and automatic credential scrubbing.
 
-## 🖥️ Web Dashboard Views
+### 4. 📦 Dependency Manifest Matrix (`/dependencies/`)
+* **Ecosystem Manifest Coverage:** Automatically indexes `go.mod`, `package.json`, `requirements.txt`, `pyproject.toml`, `composer.json`, `pom.xml`, and `build.gradle`.
+* **Third-Party Dependency Audit:** Categorizes direct vs transitive packages and visualizes library adoption footprint.
 
-When running `codedna serve`, access `http://localhost:8080` (or `http://localhost:3000` in dev mode):
+### 5. ⏱️ Runtime DNA & Execution Timeline (`/runtime/`)
+* **Microsecond Profiling:** Non-invasive execution path telemetry capturing function invocation duration and stack traces.
+* **Static vs Runtime Reconciliation:** Juxtaposes static AST call trees against live runtime executions to reveal dead code and undocumented dynamic dispatches.
 
-1. **Overview Dashboard**: System health score, circular cycles, complexity hotspots, and layer health.
-2. **Repository Explorer**: Two-pane file tree and source code inspector with syntax lines.
-3. **DNA Graph**: Interactive React Flow node-link canvas with search and layout controls.
-4. **Dependencies**: External package manifests categorized by ecosystem.
-5. **Runtime Timeline**: Observed execution traces, hot functions, and static vs runtime coverage.
-6. **Change Impact Analysis**: Diff risk scoring, modified functions, and test recommendations.
-7. **Architecture Health**: Enforced rules and boundary violation reports.
-8. **AI Assistant**: Q&A, business logic mapping, and Claude Code / Cursor context export.
-9. **Settings**: Ignore patterns, Ollama configuration, and database storage info.
+### 6. 🎯 Change Impact & Blast Radius Analyzer (`/impact/`)
+* **Git Diff Symbol Mapping:** Parses incoming Git modifications line-by-line and maps changed lines to discrete AST functions and methods.
+* **Quantified Risk Score (0–100):** Evaluates cyclomatic complexity, incoming callers, and public API exposure of modified symbols.
+* **Blast Radius Tree & Test Selection:** Visualizes cascading upstream caller impacts and recommends the minimal set of unit/integration tests to execute.
+
+### 7. 🛡️ Architectural Health & Layer Drift Enforcer (`/architecture/`)
+* **Layer Contracts:** Configurable boundaries defining relationships between `presentation`, `application`, `domain`, and `infrastructure`.
+* **Zero-Tolerance Boundary Violation Audit:** Lists illicit cross-layer imports with exact source line and column numbers.
+* **Layer Health Gauge:** Visual 0–100% compliance gauge to prevent architectural debt from slipping into releases.
+
+### 8. 🤖 AI Codebase Intelligence & Context Exporter (`/ai/`)
+* **Business Logic Domain Mapping:** Automatically classifies codebase subsystems (Authentication, Billing, Data Ingestion, API Controllers, Database).
+* **Targeted AI Context Generation:** One-click generation of optimized context files for **Claude Code** (`CLAUDE.md`), **Cursor** (`.cursorrules`), and **Codex**.
+* **Zero-Cloud Privacy Guarantee:** Local-first heuristics with optional local Ollama integration. Zero source code transmitted externally without explicit user confirmation.
+
+### 9. ⚙️ Multi-Repo Workspace Switcher & Configuration (`/settings/`)
+* **Multi-Repository Workspace Linker:** Switch seamlessly between open codebases or link frontend and backend repositories together.
+* **Scan Parameters & Filters:** Configure ignore globs (`.codednaignore`), AST parse budgets, and local SQLite database maintenance.
 
 ---
 
