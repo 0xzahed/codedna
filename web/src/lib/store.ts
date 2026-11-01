@@ -17,6 +17,8 @@ interface AppState {
   setActiveTab: (tab: NavTab) => void;
   scanId: number;
   setScanId: (id: number) => void;
+  activeRepoName: string;
+  setActiveRepoName: (name: string) => void;
   isScanning: boolean;
   setIsScanning: (scanning: boolean) => void;
   repoStats: RepoStats | null;
@@ -33,8 +35,20 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   activeTab: 'overview',
   setActiveTab: (tab) => set({ activeTab: tab }),
-  scanId: 1,
-  setScanId: (id) => set({ scanId: id }),
+  scanId: typeof window !== 'undefined' ? Number(localStorage.getItem('codedna_scan_id')) || 1 : 1,
+  setScanId: (id) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('codedna_scan_id', id.toString());
+    }
+    set({ scanId: id });
+  },
+  activeRepoName: typeof window !== 'undefined' ? localStorage.getItem('codedna_repo_name') || 'codedna' : 'codedna',
+  setActiveRepoName: (name) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('codedna_repo_name', name);
+    }
+    set({ activeRepoName: name });
+  },
   isScanning: false,
   setIsScanning: (scanning) => set({ isScanning: scanning }),
   repoStats: null,

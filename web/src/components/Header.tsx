@@ -1,18 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../lib/store';
-import { triggerScan, fetchReport } from '../lib/api';
+import { triggerScan, fetchReport, fetchRepos } from '../lib/api';
 import { 
   RefreshCw, 
   Download, 
-  GitBranch, 
   CheckCircle2, 
   FileText,
   Search,
   FolderOpen,
   X,
-  AlertCircle
+  AlertCircle,
+  ChevronDown
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -20,21 +20,55 @@ interface HeaderProps {
 }
 
 export default function Header({ onSearch }: HeaderProps) {
-  const { isScanning, setIsScanning, scanId } = useAppStore();
+  const { 
+    isScanning, 
+    setIsScanning, 
+    scanId, 
+    setScanId, 
+    activeRepoName, 
+    setActiveRepoName 
+  } = useAppStore();
+
   const [downloading, setDownloading] = useState(false);
   const [searchVal, setSearchVal] = useState('');
+  const [repos, setRepos] = useState<any[]>([]);
   
   // Open / Switch Project Modal state
   const [showModal, setShowModal] = useState(false);
   const [targetInput, setTargetInput] = useState('');
   const [scanStatus, setScanStatus] = useState<string | null>(null);
+  const [scanProgress, setScanProgress] = useState<{ done: number; total: number; file: string } | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+
+  // Load repositories on mount and when scanId changes
+  useEffect(() => {
+    fetchRepos()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setRepos(data);
+          const active = data.find((r: any) => r.latestScanId === scanId);
+          if (active) {
+            setActiveRepoName(active.name);
+          } else if (data.length > 0 && !localStorage.getItem('codedna_scan_id')) {
+            if (data[0].latestScanId) {
+              setScanId(data[0].latestScanId);
+              setActiveRepoName(data[0].name);
+            }
+          }
+        }
+      })
+      .catch(() => {});
+  }, [scanId]);
 
   const handleRescan = async () => {
     try {
       setIsScanning(true);
-      await triggerScan();
-      window.location.reload();
+      const res = await triggerScan();
+      if (res.scanId) {
+        setScanId(res.scanId);
+      }
+      const data = await fetchRepos();
+      if (Array.isArray(data)) setRepos(data);
     } catch (err) {
       console.error('Scan error:', err);
     } finally {
@@ -44,21 +78,55 @@ export default function Header({ onSearch }: HeaderProps) {
 
   const handleOpenTarget = async (path: string) => {
     if (!path.trim()) return;
+    let eventSource: EventSource | null = null;
     try {
       setScanError(null);
       setIsScanning(true);
-      setScanStatus('Resolving target and analyzing AST symbols...');
+      setScanStatus('Starting intelligence pipeline...');
+      setScanProgress(null);
+
+      // Listen to SSE progress
+      if (typeof window !== 'undefined') {
+        eventSource = new EventSource('/api/events');
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'scan_progress') {
+              setScanProgress({ done: data.done, total: data.total, file: data.file });
+              setScanStatus(`Analyzing AST symbols in ${data.file}...`);
+            }
+          } catch {}
+        };
+      }
+
       const res = await triggerScan(path.trim());
       if (res.error) {
         throw new Error(res.error);
       }
+
+      if (res.scanId) {
+        setScanId(res.scanId);
+      }
+      if (res.repo?.name) {
+        setActiveRepoName(res.repo.name);
+      }
+
+      // Refresh repos list
+      const updatedRepos = await fetchRepos();
+      if (Array.isArray(updatedRepos)) {
+        setRepos(updatedRepos);
+      }
+
       setShowModal(false);
-      window.location.reload();
     } catch (err: any) {
       setScanError(err.message || 'Failed to scan target path');
     } finally {
+      if (eventSource) {
+        eventSource.close();
+      }
       setIsScanning(false);
       setScanStatus(null);
+      setScanProgress(null);
     }
   };
 
@@ -82,16 +150,40 @@ export default function Header({ onSearch }: HeaderProps) {
     }
   };
 
+  const progressPercent = scanProgress && scanProgress.total > 0
+    ? Math.min(100, Math.round((scanProgress.done / scanProgress.total) * 100))
+    : null;
+
   return (
     <>
       <header className="h-16 border-b border-charcoal-750 bg-charcoal-900 px-6 flex items-center justify-between gap-4 shrink-0">
-        {/* Repo Context */}
+        {/* Repo Selector & Status */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-charcoal-800 border border-charcoal-700 text-xs font-mono text-zinc-300">
-            <GitBranch className="w-3.5 h-3.5 text-dna-blue" />
-            <span>main</span>
+          <div className="relative">
+            <select
+              value={scanId}
+              onChange={(e) => {
+                const newId = Number(e.target.value);
+                const match = repos.find((r) => r.latestScanId === newId);
+                setScanId(newId);
+                if (match) setActiveRepoName(match.name);
+              }}
+              className="bg-charcoal-800 border border-charcoal-700 hover:border-dna-blue/50 text-xs font-mono text-zinc-200 rounded-lg pl-3 pr-8 py-1.5 focus:outline-none cursor-pointer appearance-none transition-colors"
+            >
+              {repos.length > 0 ? (
+                repos.map((r) => (
+                  <option key={r.id} value={r.latestScanId || r.id}>
+                    📁 {r.name} {r.git?.branch ? `(${r.git.branch})` : ''}
+                  </option>
+                ))
+              ) : (
+                <option value={scanId}>📁 {activeRepoName}</option>
+              )}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
-          <div className="text-xs text-zinc-400 font-mono flex items-center gap-1.5">
+
+          <div className="text-xs text-zinc-400 font-mono flex items-center gap-1.5 hidden sm:flex">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Engine Active</span>
           </div>
@@ -178,10 +270,13 @@ export default function Header({ onSearch }: HeaderProps) {
               </div>
               <button
                 onClick={() => {
-                  setShowModal(false);
-                  setScanError(null);
+                  if (!isScanning) {
+                    setShowModal(false);
+                    setScanError(null);
+                  }
                 }}
-                className="text-zinc-400 hover:text-white"
+                disabled={isScanning}
+                className="text-zinc-400 hover:text-white disabled:opacity-30"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -189,7 +284,7 @@ export default function Header({ onSearch }: HeaderProps) {
 
             <p className="text-xs text-zinc-400 leading-relaxed">
               Enter any absolute/relative local directory path or a public GitHub repository URL.
-              CodeDNA will parse AST symbols, resolve dependency trees, and visualize the architecture.
+              CodeDNA parses AST symbols, maps caller trees, and visualizes system architecture in real-time.
             </p>
 
             <form
@@ -207,8 +302,9 @@ export default function Header({ onSearch }: HeaderProps) {
                   type="text"
                   value={targetInput}
                   onChange={(e) => setTargetInput(e.target.value)}
+                  disabled={isScanning}
                   placeholder="/path/to/project, ~/repos/api, or https://github.com/org/repo"
-                  className="w-full bg-charcoal-850 border border-charcoal-700 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-dna-blue"
+                  className="w-full bg-charcoal-850 border border-charcoal-700 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-dna-blue disabled:opacity-50"
                   autoFocus
                 />
               </div>
@@ -219,24 +315,27 @@ export default function Header({ onSearch }: HeaderProps) {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => setTargetInput('./examples/ecommerce-service')}
-                    className="px-2.5 py-1 rounded bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-[11px] text-zinc-300"
+                    disabled={isScanning}
+                    onClick={() => setTargetInput('/home/zahed/Downloads/i-edu-backend-master')}
+                    className="px-2.5 py-1 rounded bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-[11px] text-zinc-300 disabled:opacity-50"
                   >
-                    📦 ./examples/ecommerce-service
+                    📂 i-edu-backend-master
                   </button>
                   <button
                     type="button"
+                    disabled={isScanning}
+                    onClick={() => setTargetInput('./examples/ecommerce-service')}
+                    className="px-2.5 py-1 rounded bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-[11px] text-zinc-300 disabled:opacity-50"
+                  >
+                    📦 ecommerce-service
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isScanning}
                     onClick={() => setTargetInput('.')}
-                    className="px-2.5 py-1 rounded bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-[11px] text-zinc-300"
+                    className="px-2.5 py-1 rounded bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-[11px] text-zinc-300 disabled:opacity-50"
                   >
                     ⚡ CodeDNA Engine (.)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTargetInput('https://github.com/gin-gonic/gin')}
-                    className="px-2.5 py-1 rounded bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-[11px] text-zinc-300"
-                  >
-                    🌐 gin-gonic/gin (GitHub)
                   </button>
                 </div>
               </div>
@@ -248,27 +347,59 @@ export default function Header({ onSearch }: HeaderProps) {
                 </div>
               )}
 
-              {scanStatus && (
-                <div className="p-3 bg-dna-blue/10 border border-dna-blue/30 rounded-lg flex items-center gap-2 text-xs text-blue-300">
-                  <RefreshCw className="w-4 h-4 animate-spin text-dna-blue" />
-                  <span>{scanStatus}</span>
+              {/* Real-time progress bar feedback */}
+              {isScanning && (
+                <div className="p-4 bg-charcoal-850 border border-charcoal-700 rounded-lg space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-dna-blue flex items-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-dna-blue" />
+                      <span>{scanStatus || 'Parsing AST symbols...'}</span>
+                    </span>
+                    {progressPercent !== null && (
+                      <span className="text-zinc-300 font-bold">{progressPercent}%</span>
+                    )}
+                  </div>
+
+                  {progressPercent !== null && (
+                    <div className="w-full bg-charcoal-800 rounded-full h-2 overflow-hidden border border-charcoal-700">
+                      <div 
+                        className="bg-dna-blue h-full transition-all duration-200" 
+                        style={{ width: `${progressPercent}%` }} 
+                      />
+                    </div>
+                  )}
+
+                  {scanProgress && (
+                    <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                      <span>Parsed {scanProgress.done} of {scanProgress.total} files</span>
+                      <span className="truncate max-w-[200px] text-zinc-400">[{scanProgress.file}]</span>
+                    </div>
+                  )}
                 </div>
               )}
 
               <div className="flex justify-end gap-2 pt-2 border-t border-charcoal-750">
                 <button
                   type="button"
+                  disabled={isScanning}
                   onClick={() => setShowModal(false)}
-                  className="px-3 py-1.5 bg-charcoal-800 hover:bg-charcoal-750 text-xs text-zinc-300 rounded-lg border border-charcoal-700"
+                  className="px-3 py-1.5 bg-charcoal-800 hover:bg-charcoal-750 text-xs text-zinc-300 rounded-lg border border-charcoal-700 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!targetInput.trim() || isScanning}
-                  className="px-4 py-1.5 bg-dna-blue text-charcoal-950 font-bold hover:bg-dna-blue/90 text-xs rounded-lg transition-all disabled:opacity-50"
+                  className="px-4 py-1.5 bg-dna-blue text-charcoal-950 font-bold hover:bg-dna-blue/90 text-xs rounded-lg transition-all disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isScanning ? 'Scanning...' : 'Scan & Open'}
+                  {isScanning ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Scanning...</span>
+                    </>
+                  ) : (
+                    <span>Scan &amp; Open</span>
+                  )}
                 </button>
               </div>
             </form>

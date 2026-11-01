@@ -87,6 +87,7 @@ func (s *Server) Handler() http.Handler {
 func (s *Server) registerRoutes() {
 	// API routes
 	s.mux.HandleFunc("/api/health", s.handleHealth)
+	s.mux.HandleFunc("/api/active", s.handleActive)
 	s.mux.HandleFunc("/api/repos", s.handleRepos)
 	s.mux.HandleFunc("/api/repos/scan", s.handleScan)
 	s.mux.HandleFunc("/api/scans/", s.handleScanSubroutes)
@@ -168,6 +169,13 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleActive(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"scanId":   s.lastScanID,
+		"repoRoot": s.repoRoot,
+	})
+}
+
 func (s *Server) handleRepos(w http.ResponseWriter, r *http.Request) {
 	repos, err := s.store.LoadAllRepos()
 	if err != nil {
@@ -205,6 +213,7 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.lastScanID = res.ScanID
+	s.repoRoot = res.Repo.Root
 	s.broadcastSSE(fmt.Sprintf(`{"type":"scan_completed","scanId":%d,"repoId":%d}`, res.ScanID, res.RepoID))
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

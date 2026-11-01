@@ -202,12 +202,13 @@ type CycleDetail struct {
 
 // RepoInfo identifies a scanned repository.
 type RepoInfo struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Root      string    `json:"root"`
-	CreatedAt time.Time `json:"createdAt"`
-	LastScan  *time.Time `json:"lastScan,omitempty"`
-	Git       GitMeta   `json:"git"`
+	ID           int64      `json:"id"`
+	Name         string     `json:"name"`
+	Root         string     `json:"root"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	LastScan     *time.Time `json:"lastScan,omitempty"`
+	LatestScanID int64      `json:"latestScanId,omitempty"`
+	Git          GitMeta    `json:"git"`
 }
 
 // Scan is one execution of the scan+analyze pipeline.

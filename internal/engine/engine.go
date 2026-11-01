@@ -4,6 +4,8 @@ package engine
 
 import (
 	"fmt"
+	"runtime"
+	"sync"
 	"time"
 
 	"github.com/codedna/codedna/internal/analysis"
@@ -53,28 +55,80 @@ func Run(repoRoot string, st *store.Store, progress scanner.ScanProgress) (*Pipe
 		return nil, fmt.Errorf("begin scan: %w", err)
 	}
 
-	// 4. Parse code files using Tree-sitter
+	// 4. Parse code files using Tree-sitter in parallel
 	canParse := scanner.ParsedLanguages()
-	var parseResults []*model.FileParseResult
+	var parseableFiles []model.FileNode
+	for _, f := range scanRes.Files {
+		if canParse[f.Language] {
+			parseableFiles = append(parseableFiles, f)
+		}
+	}
+
+	totalParseable := len(parseableFiles)
+	numWorkers := runtime.NumCPU()
+	if numWorkers > 16 {
+		numWorkers = 16
+	}
+	if numWorkers < 2 {
+		numWorkers = 2
+	}
+
+	type parseTask struct {
+		index int
+		file  model.FileNode
+	}
+	type parseOutput struct {
+		index int
+		res   *model.FileParseResult
+		err   error
+	}
+
+	tasks := make(chan parseTask, totalParseable)
+	results := make(chan parseOutput, totalParseable)
+
+	var wg sync.WaitGroup
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for t := range tasks {
+				res, err := parser.Parse(scanRes.Root, t.file.Path)
+				results <- parseOutput{index: t.index, res: res, err: err}
+			}
+		}()
+	}
+
+	for i, f := range parseableFiles {
+		tasks <- parseTask{index: i, file: f}
+	}
+	close(tasks)
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	parseResults := make([]*model.FileParseResult, 0, totalParseable)
 	var parseErrorsCount int
+	completedCount := 0
 
-	for i, f := range scanRes.Files {
-		if !canParse[f.Language] {
-			continue
-		}
-
-		res, err := parser.Parse(scanRes.Root, f.Path)
-		if err != nil {
+	for out := range results {
+		completedCount++
+		if out.err != nil {
 			parseErrorsCount++
-			continue
+		} else if out.res != nil {
+			if len(out.res.ParseErrors) > 0 {
+				parseErrorsCount += len(out.res.ParseErrors)
+			}
+			parseResults = append(parseResults, out.res)
 		}
-		if len(res.ParseErrors) > 0 {
-			parseErrorsCount += len(res.ParseErrors)
-		}
-		parseResults = append(parseResults, res)
 
-		if progress != nil && (i%20 == 0 || i == len(scanRes.Files)-1) {
-			progress(i+1, len(scanRes.Files), f.Path)
+		if progress != nil && (completedCount%10 == 0 || completedCount == totalParseable) {
+			filePath := ""
+			if out.res != nil {
+				filePath = out.res.File
+			}
+			progress(completedCount, totalParseable, filePath)
 		}
 	}
 

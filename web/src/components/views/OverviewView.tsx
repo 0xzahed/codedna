@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 export default function OverviewView() {
-  const { scanId, setActiveTab, setSelectedNode } = useAppStore();
+  const { scanId, setActiveTab, setSelectedNode, activeRepoName } = useAppStore();
   const [stats, setStats] = useState<RepoStats | null>(null);
   const [issues, setIssues] = useState<IssueItem[]>([]);
   const [arch, setArch] = useState<ArchReport | null>(null);
@@ -67,7 +67,10 @@ export default function OverviewView() {
       <div className="flex items-center justify-between border-b border-charcoal-750 pb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-            Codebase Intelligence Overview
+            <span>Codebase Intelligence Overview</span>
+            <span className="text-xs font-mono font-normal px-2.5 py-1 rounded bg-dna-blue/15 text-dna-blue border border-dna-blue/30">
+              📁 {activeRepoName || 'active project'}
+            </span>
           </h1>
           <p className="text-sm text-zinc-400 mt-1">
             Real-time static topology, architectural boundaries, and software DNA metrics.

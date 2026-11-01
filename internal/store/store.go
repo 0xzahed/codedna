@@ -637,7 +637,9 @@ func (s *Store) LoadImpactReport(scanID int64) (*model.ImpactReport, error) {
 
 // LoadAllRepos lists all repositories discovered or scanned.
 func (s *Store) LoadAllRepos() ([]model.RepoInfo, error) {
-	rows, err := s.db.Query(`SELECT id, name, root, created_at, git_json FROM repos ORDER BY id DESC`)
+	rows, err := s.db.Query(`SELECT id, name, root, created_at, git_json,
+		COALESCE((SELECT MAX(s.id) FROM scans s WHERE s.repo_id = repos.id), 0)
+		FROM repos ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -648,7 +650,7 @@ func (s *Store) LoadAllRepos() ([]model.RepoInfo, error) {
 		var r model.RepoInfo
 		var createdSec int64
 		var gitJ sql.NullString
-		if err := rows.Scan(&r.ID, &r.Name, &r.Root, &createdSec, &gitJ); err != nil {
+		if err := rows.Scan(&r.ID, &r.Name, &r.Root, &createdSec, &gitJ, &r.LatestScanID); err != nil {
 			return nil, err
 		}
 		r.CreatedAt = time.Unix(createdSec, 0)

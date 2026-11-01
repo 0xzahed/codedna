@@ -148,6 +148,11 @@ export async function fetchHealth() {
   return res.json();
 }
 
+export async function fetchActive(): Promise<{ scanId: number; repoRoot: string }> {
+  const res = await fetch(`${API_BASE}/api/active`);
+  return res.json();
+}
+
 export async function fetchRepos() {
   const res = await fetch(`${API_BASE}/api/repos`);
   return res.json();

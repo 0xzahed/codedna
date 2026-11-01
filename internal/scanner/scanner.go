@@ -22,6 +22,7 @@ var DefaultIgnore = map[string]bool{
 	"coverage": true, ".next": true, ".nuxt": true, ".tox": true,
 	".mypy_cache": true, ".pytest_cache": true, ".gradle": true,
 	"out": true, "bin": false, ".terraform": true, "site-packages": true,
+	"static_cdn": true, "static_serve": true, "staticfiles": true,
 }
 
 // language detection mapping: extension -> canonical language name.
@@ -211,6 +212,9 @@ func (s *Scanner) Scan(root string, progress ScanProgress) (*ScanResult, error) 
 			return nil
 		}
 		base := filepath.Base(path)
+		if strings.HasSuffix(base, ".min.js") || strings.HasSuffix(base, ".min.css") {
+			return nil
+		}
 		ext := strings.ToLower(filepath.Ext(base))
 		size := int64(0)
 		if fi, fierr := d.Info(); fierr == nil {
