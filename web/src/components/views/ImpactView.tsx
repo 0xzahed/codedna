@@ -129,7 +129,7 @@ export default function ImpactView() {
               <FileCode className="w-4 h-4 text-dna-blue" />
               <span>Directly Modified Symbols</span>
             </h3>
-            <span className="text-xs text-zinc-400">{report?.changedSymbols.length ?? 0} found</span>
+            <span className="text-xs text-zinc-400">{report?.changedSymbols?.length ?? 0} found</span>
           </div>
 
           {report?.changedSymbols && report.changedSymbols.length > 0 ? (

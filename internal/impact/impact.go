@@ -113,9 +113,15 @@ func ParseDiffOutput(diffText string) []FileDiff {
 // impacted APIs, affected tests, and an overall risk score.
 func AnalyzeImpact(repoRoot string, baseRef string, diffs []FileDiff, idx *analysis.Index, files []model.FileNode) *model.ImpactReport {
 	report := &model.ImpactReport{
-		BaseRef:   baseRef,
-		TargetRef: "HEAD",
-		CreatedAt: time.Now(),
+		BaseRef:           baseRef,
+		TargetRef:         "HEAD",
+		ChangedFiles:      []string{},
+		ChangedSymbols:    []model.ChangedSymbol{},
+		UpstreamAffected:  []string{},
+		DownstreamCalls:   []string{},
+		AffectedEndpoints: []string{},
+		AffectedTests:     []string{},
+		CreatedAt:         time.Now(),
 	}
 
 	if len(diffs) == 0 {
