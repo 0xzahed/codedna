@@ -474,3 +474,65 @@ type RepoKnowledgeMap struct {
 	Files           []FileOwnership `json:"files"`
 }
 
+// System Design & Architecture Flow models
+type TierKind string
+
+const (
+	TierClient      TierKind = "client_gateway"
+	TierAPI         TierKind = "api_presentation"
+	TierService     TierKind = "domain_service"
+	TierStorage     TierKind = "persistence_storage"
+	TierMessaging   TierKind = "async_messaging"
+	TierIntegration TierKind = "external_integration"
+)
+
+type SystemTier struct {
+	ID          TierKind `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Order       int      `json:"order"`
+	FileCount   int      `json:"fileCount"`
+	SymbolCount int      `json:"symbolCount"`
+	Files       []string `json:"files,omitempty"`
+	KeySymbols  []string `json:"keySymbols,omitempty"`
+}
+
+type DataFlowHop struct {
+	FromTier    TierKind `json:"fromTier"`
+	ToTier      TierKind `json:"toTier"`
+	Protocol    string   `json:"protocol"` // "HTTP", "In-Memory Call", "SQL / Query", "Async Event"
+	CallCount   int      `json:"callCount"`
+	SampleCalls []string `json:"sampleCalls,omitempty"`
+}
+
+type PatternCategory string
+
+const (
+	PatternArchitectural PatternCategory = "Architectural"
+	PatternStructural    PatternCategory = "Structural"
+	PatternCreational    PatternCategory = "Creational"
+	PatternBehavioral    PatternCategory = "Behavioral"
+)
+
+type DetectedPattern struct {
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	Category    PatternCategory `json:"category"`
+	Confidence  float64         `json:"confidence"` // 0.0 - 1.0
+	Description string          `json:"description"`
+	Evidence    []string        `json:"evidence"`
+	Files       []string        `json:"files"`
+	Tradeoffs   string          `json:"tradeoffs"`
+}
+
+type SystemDesignReport struct {
+	ArchitectureStyle  string            `json:"architectureStyle"`
+	Summary            string            `json:"summary"`
+	Tiers              []SystemTier      `json:"tiers"`
+	DataFlow           []DataFlowHop     `json:"dataFlow"`
+	DetectedPatterns   []DetectedPattern `json:"detectedPatterns"`
+	KeyEntrypoints     []string          `json:"keyEntrypoints"`
+	BottleneckHotspots []string          `json:"bottleneckHotspots"`
+	ReliabilityScore   float64           `json:"reliabilityScore"` // 0 - 100
+}
+
