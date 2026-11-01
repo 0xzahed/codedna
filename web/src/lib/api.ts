@@ -243,3 +243,52 @@ export async function fetchReport(scanId: number = 1, format: 'markdown' | 'json
   if (format === 'json') return res.json();
   return res.text();
 }
+
+export interface CrossServiceLink {
+  id: string;
+  sourceRepoId: number;
+  sourceRepoName: string;
+  sourceFile: string;
+  sourceSymbol?: string;
+  targetRepoId: number;
+  targetRepoName: string;
+  targetFile: string;
+  targetSymbol?: string;
+  httpMethod: string;
+  routePath: string;
+  confidence: number;
+  description: string;
+}
+
+export interface WorkspaceItem {
+  id: number;
+  name: string;
+  repoIds: number[];
+  repos?: any[];
+  links?: CrossServiceLink[];
+  createdAt: string;
+}
+
+export async function fetchWorkspaces(): Promise<WorkspaceItem[]> {
+  const res = await fetch(`${API_BASE}/api/workspaces`);
+  return res.json();
+}
+
+export async function createWorkspace(name: string, repoIds: number[]): Promise<WorkspaceItem> {
+  const res = await fetch(`${API_BASE}/api/workspaces`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, repoIds }),
+  });
+  return res.json();
+}
+
+export async function fetchWorkspace(id: number): Promise<WorkspaceItem> {
+  const res = await fetch(`${API_BASE}/api/workspaces/${id}`);
+  return res.json();
+}
+
+export async function fetchWorkspaceGraph(id: number): Promise<GraphData> {
+  const res = await fetch(`${API_BASE}/api/workspaces/${id}/graph`);
+  return res.json();
+}

@@ -23,6 +23,7 @@ export default function ExplorerView() {
   const [fileContent, setFileContent] = useState<string>('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingContent, setLoadingContent] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -45,12 +46,22 @@ export default function ExplorerView() {
   }, [scanId]);
 
   useEffect(() => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      setFileContent('');
+      return;
+    }
+    setLoadingContent(true);
     fetchFileContent(scanId, selectedFile.path)
       .then((res) => {
-        setFileContent(res.content || '');
+        setFileContent(res?.content || '');
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setFileContent('');
+      })
+      .finally(() => {
+        setLoadingContent(false);
+      });
   }, [selectedFile, scanId]);
 
   const filteredFiles = (Array.isArray(files) ? files : []).filter((f) => 
@@ -156,16 +167,29 @@ export default function ExplorerView() {
 
               {/* Code viewer */}
               <div className="flex-1 overflow-auto p-4 font-mono text-xs leading-relaxed select-text bg-charcoal-950">
-                {codeLines.map((line, idx) => (
-                  <div key={idx + 1} className="flex items-start hover:bg-charcoal-800/40 px-2 py-0.5 rounded">
-                    <span className="w-12 shrink-0 text-right pr-4 text-zinc-600 select-none text-[11px]">
-                      {idx + 1}
-                    </span>
-                    <pre className="flex-1 overflow-x-auto whitespace-pre font-mono text-[11px] text-zinc-300">
-                      {line || ' '}
-                    </pre>
+                {loadingContent ? (
+                  <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 border-2 border-dna-blue border-t-transparent rounded-full animate-spin" />
+                      <span>Loading source code...</span>
+                    </div>
                   </div>
-                ))}
+                ) : codeLines.length > 0 ? (
+                  codeLines.map((line, idx) => (
+                    <div key={idx + 1} className="flex items-start hover:bg-charcoal-800/40 px-2 py-0.5 rounded">
+                      <span className="w-12 shrink-0 text-right pr-4 text-zinc-600 select-none text-[11px]">
+                        {idx + 1}
+                      </span>
+                      <pre className="flex-1 overflow-x-auto whitespace-pre font-mono text-[11px] text-zinc-300">
+                        {line || ' '}
+                      </pre>
+                    </div>
+                  ))
+                ) : (
+                  <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs">
+                    File is empty or binary preview unavailable.
+                  </div>
+                )}
               </div>
             </div>
           </>

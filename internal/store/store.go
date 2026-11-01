@@ -129,6 +129,12 @@ CREATE TABLE IF NOT EXISTS impact_reports (
 	report_json TEXT NOT NULL,
 	created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS workspaces (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL,
+	repo_ids_json TEXT NOT NULL,
+	created_at INTEGER NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_symbols_sid ON symbols(scan_id, sid);
 CREATE INDEX IF NOT EXISTS idx_symbols_file ON symbols(scan_id, file_path);
 CREATE INDEX IF NOT EXISTS idx_rel_from ON relationships(scan_id, from_id);
@@ -710,6 +716,96 @@ func (s *Store) LoadScans(repoID int64) ([]model.Scan, error) {
 		out = append(out, sc)
 	}
 	return out, rows.Err()
+}
+
+// SaveWorkspace creates a workspace grouping multiple repos.
+func (s *Store) SaveWorkspace(name string, repoIDs []int64) (*model.Workspace, error) {
+	now := time.Now().Unix()
+	rj, err := json.Marshal(repoIDs)
+	if err != nil {
+		return nil, err
+	}
+	res, err := s.db.Exec(`INSERT INTO workspaces (name, repo_ids_json, created_at) VALUES (?, ?, ?)`, name, string(rj), now)
+	if err != nil {
+		return nil, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return s.LoadWorkspace(id)
+}
+
+// LoadWorkspaces returns all workspaces.
+func (s *Store) LoadWorkspaces() ([]model.Workspace, error) {
+	rows, err := s.db.Query(`SELECT id, name, repo_ids_json, created_at FROM workspaces ORDER BY id DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.Workspace
+	for rows.Next() {
+		var ws model.Workspace
+		var rj string
+		var createdSec int64
+		if err := rows.Scan(&ws.ID, &ws.Name, &rj, &createdSec); err != nil {
+			return nil, err
+		}
+		ws.CreatedAt = time.Unix(createdSec, 0)
+		json.Unmarshal([]byte(rj), &ws.RepoIDs)
+		out = append(out, ws)
+	}
+	return out, rows.Err()
+}
+
+// LoadWorkspace loads a single workspace by ID.
+func (s *Store) LoadWorkspace(id int64) (*model.Workspace, error) {
+	row := s.db.QueryRow(`SELECT id, name, repo_ids_json, created_at FROM workspaces WHERE id = ?`, id)
+	var ws model.Workspace
+	var rj string
+	var createdSec int64
+	if err := row.Scan(&ws.ID, &ws.Name, &rj, &createdSec); err != nil {
+		return nil, err
+	}
+	ws.CreatedAt = time.Unix(createdSec, 0)
+	json.Unmarshal([]byte(rj), &ws.RepoIDs)
+	return &ws, nil
+}
+
+// LoadRepoRootForScan retrieves the absolute filesystem root path of the repo for a given scan ID or repo ID.
+func (s *Store) LoadRepoRootForScan(scanID int64) (string, error) {
+	var root string
+	err := s.db.QueryRow(`SELECT r.root FROM scans s JOIN repos r ON s.repo_id = r.id WHERE s.id = ?`, scanID).Scan(&root)
+	if err == nil && root != "" {
+		return root, nil
+	}
+	// Fallback: check if scanID was actually a repo_id
+	err = s.db.QueryRow(`SELECT root FROM repos WHERE id = ?`, scanID).Scan(&root)
+	if err == nil && root != "" {
+		return root, nil
+	}
+	return "", err
+}
+
+// FindRepoRootForFile searches all registered repos to see which one contains the specified relative file.
+func (s *Store) FindRepoRootForFile(cleanedPath string) string {
+	rows, err := s.db.Query(`SELECT root FROM repos`)
+	if err != nil {
+		return ""
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var root string
+		if err := rows.Scan(&root); err == nil && root != "" {
+			candidate := filepath.Join(root, cleanedPath)
+			if fi, err := os.Stat(candidate); err == nil && !fi.IsDir() {
+				return root
+			}
+		}
+	}
+	return ""
 }
 
 // Close releases the DB handle.

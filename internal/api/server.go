@@ -27,6 +27,7 @@ import (
 	"github.com/codedna/codedna/internal/runtime"
 	"github.com/codedna/codedna/internal/store"
 	"github.com/codedna/codedna/internal/watcher"
+	"github.com/codedna/codedna/internal/workspace"
 )
 
 // Server coordinates the API handlers, SSE broadcasters, and web dashboard.
@@ -97,6 +98,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/ai/context", s.handleAIContext)
 	s.mux.HandleFunc("/api/ai/business-logic", s.handleAIBusinessLogic)
 	s.mux.HandleFunc("/api/events", s.handleSSE)
+	s.mux.HandleFunc("/api/workspaces", s.handleWorkspaces)
+	s.mux.HandleFunc("/api/workspaces/", s.handleWorkspaceSubroutes)
 
 	// Web dashboard fallback / static files
 	if s.webFS != nil {
@@ -474,8 +477,23 @@ func (s *Server) handleScanFileContent(w http.ResponseWriter, r *http.Request, s
 		return
 	}
 
-	fullPath := filepath.Join(s.repoRoot, cleaned)
-	if !strings.HasPrefix(fullPath, s.repoRoot) {
+	repoRoot := s.repoRoot
+	if s.store != nil {
+		if scanRoot, err := s.store.LoadRepoRootForScan(scanID); err == nil && scanRoot != "" {
+			repoRoot = scanRoot
+		}
+	}
+
+	fullPath := filepath.Join(repoRoot, cleaned)
+	// If file doesn't exist at resolved repoRoot, fallback to checking other registered repos
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) && s.store != nil {
+		if altRoot := s.store.FindRepoRootForFile(cleaned); altRoot != "" {
+			repoRoot = altRoot
+			fullPath = filepath.Join(repoRoot, cleaned)
+		}
+	}
+
+	if !strings.HasPrefix(fullPath, repoRoot) {
 		writeError(w, http.StatusForbidden, "access denied: path outside repository root")
 		return
 	}
@@ -523,10 +541,15 @@ func (s *Server) handleScanImpact(w http.ResponseWriter, r *http.Request, scanID
 		baseRef = "main"
 	}
 
-	diffs, err := impact.ParseGitDiff(s.repoRoot, baseRef)
+	repoRoot := s.repoRoot
+	if scanRoot, err := s.store.LoadRepoRootForScan(scanID); err == nil && scanRoot != "" {
+		repoRoot = scanRoot
+	}
+
+	diffs, err := impact.ParseGitDiff(repoRoot, baseRef)
 	if err != nil {
 		// Try diffing against empty base
-		diffs, _ = impact.ParseGitDiff(s.repoRoot, "")
+		diffs, _ = impact.ParseGitDiff(repoRoot, "")
 	}
 
 	syms, _ := s.store.LoadSymbols(scanID)
@@ -538,14 +561,19 @@ func (s *Server) handleScanImpact(w http.ResponseWriter, r *http.Request, scanID
 		Rel:     rels,
 	}
 
-	report := impact.AnalyzeImpact(s.repoRoot, baseRef, diffs, idx, files)
+	report := impact.AnalyzeImpact(repoRoot, baseRef, diffs, idx, files)
 	s.store.SaveImpactReport(scanID, report)
 
 	writeJSON(w, http.StatusOK, report)
 }
 
 func (s *Server) handleScanArchitecture(w http.ResponseWriter, r *http.Request, scanID int64) {
-	rules, err := architecture.LoadRules(s.repoRoot)
+	repoRoot := s.repoRoot
+	if scanRoot, err := s.store.LoadRepoRootForScan(scanID); err == nil && scanRoot != "" {
+		repoRoot = scanRoot
+	}
+
+	rules, err := architecture.LoadRules(repoRoot)
 	if err != nil {
 		rules = architecture.DefaultRules()
 	}
@@ -791,6 +819,243 @@ func (s *Server) broadcastSSE(msg string) {
 		case ch <- msg:
 		default:
 		}
+	}
+}
+
+func (s *Server) handleWorkspaces(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		workspaces, err := s.store.LoadWorkspaces()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		allRepos, _ := s.store.LoadAllRepos()
+		repoMap := make(map[int64]model.RepoInfo)
+		for _, rp := range allRepos {
+			repoMap[rp.ID] = rp
+		}
+		for i := range workspaces {
+			for _, rid := range workspaces[i].RepoIDs {
+				if rp, ok := repoMap[rid]; ok {
+					workspaces[i].Repos = append(workspaces[i].Repos, rp)
+				}
+			}
+		}
+		writeJSON(w, http.StatusOK, workspaces)
+
+	case http.MethodPost:
+		var req struct {
+			Name    string  `json:"name"`
+			RepoIDs []int64 `json:"repoIds"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+			return
+		}
+		if strings.TrimSpace(req.Name) == "" {
+			req.Name = "Multi-Service Workspace"
+		}
+		if len(req.RepoIDs) < 2 {
+			writeError(w, http.StatusBadRequest, "at least 2 repositories are required to connect a workspace")
+			return
+		}
+
+		ws, err := s.store.SaveWorkspace(req.Name, req.RepoIDs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to save workspace: "+err.Error())
+			return
+		}
+
+		allRepos, _ := s.store.LoadAllRepos()
+		repoMap := make(map[int64]model.RepoInfo)
+		for _, rp := range allRepos {
+			repoMap[rp.ID] = rp
+		}
+
+		var allLinks []model.CrossServiceLink
+		for _, r1ID := range ws.RepoIDs {
+			r1, ok1 := repoMap[r1ID]
+			if !ok1 {
+				continue
+			}
+			ws.Repos = append(ws.Repos, r1)
+			r1Files, _ := s.store.LoadFiles(r1.LatestScanID)
+			r1Endpoints := workspace.ExtractEndpoints(r1.ID, r1.Name, r1.Root, r1Files)
+			r1Calls := workspace.ExtractAPICalls(r1.ID, r1.Name, r1.Root, r1Files)
+
+			for _, r2ID := range ws.RepoIDs {
+				if r1ID == r2ID {
+					continue
+				}
+				r2, ok2 := repoMap[r2ID]
+				if !ok2 {
+					continue
+				}
+				r2Files, _ := s.store.LoadFiles(r2.LatestScanID)
+				r2Endpoints := workspace.ExtractEndpoints(r2.ID, r2.Name, r2.Root, r2Files)
+				r2Calls := workspace.ExtractAPICalls(r2.ID, r2.Name, r2.Root, r2Files)
+
+				links1 := workspace.ResolveCrossServiceLinks(r1, r1Calls, r2, r2Endpoints)
+				allLinks = append(allLinks, links1...)
+
+				links2 := workspace.ResolveCrossServiceLinks(r2, r2Calls, r1, r1Endpoints)
+				allLinks = append(allLinks, links2...)
+			}
+		}
+
+		dedupMap := make(map[string]bool)
+		var uniqueLinks []model.CrossServiceLink
+		for _, l := range allLinks {
+			if !dedupMap[l.ID] {
+				dedupMap[l.ID] = true
+				uniqueLinks = append(uniqueLinks, l)
+			}
+		}
+		ws.Links = uniqueLinks
+
+		writeJSON(w, http.StatusOK, ws)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleWorkspaceSubroutes(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/workspaces/"), "/")
+	if len(parts) == 0 || parts[0] == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	wsID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid workspace id")
+		return
+	}
+
+	ws, err := s.store.LoadWorkspace(wsID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "workspace not found")
+		return
+	}
+
+	allRepos, _ := s.store.LoadAllRepos()
+	repoMap := make(map[int64]model.RepoInfo)
+	for _, rp := range allRepos {
+		repoMap[rp.ID] = rp
+	}
+	for _, rid := range ws.RepoIDs {
+		if rp, ok := repoMap[rid]; ok {
+			ws.Repos = append(ws.Repos, rp)
+		}
+	}
+
+	sub := ""
+	if len(parts) > 1 {
+		sub = parts[1]
+	}
+
+	switch sub {
+	case "":
+		var allLinks []model.CrossServiceLink
+		for _, r1 := range ws.Repos {
+			r1Files, _ := s.store.LoadFiles(r1.LatestScanID)
+			r1Endpoints := workspace.ExtractEndpoints(r1.ID, r1.Name, r1.Root, r1Files)
+			r1Calls := workspace.ExtractAPICalls(r1.ID, r1.Name, r1.Root, r1Files)
+
+			for _, r2 := range ws.Repos {
+				if r1.ID == r2.ID {
+					continue
+				}
+				r2Files, _ := s.store.LoadFiles(r2.LatestScanID)
+				r2Endpoints := workspace.ExtractEndpoints(r2.ID, r2.Name, r2.Root, r2Files)
+				r2Calls := workspace.ExtractAPICalls(r2.ID, r2.Name, r2.Root, r2Files)
+
+				links1 := workspace.ResolveCrossServiceLinks(r1, r1Calls, r2, r2Endpoints)
+				allLinks = append(allLinks, links1...)
+				links2 := workspace.ResolveCrossServiceLinks(r2, r2Calls, r1, r1Endpoints)
+				allLinks = append(allLinks, links2...)
+			}
+		}
+		dedup := make(map[string]bool)
+		for _, l := range allLinks {
+			if !dedup[l.ID] {
+				dedup[l.ID] = true
+				ws.Links = append(ws.Links, l)
+			}
+		}
+		writeJSON(w, http.StatusOK, ws)
+
+	case "graph":
+		repoGraphs := make(map[int64]model.GraphData)
+		var allLinks []model.CrossServiceLink
+
+		for _, r1 := range ws.Repos {
+			files, _ := s.store.LoadFiles(r1.LatestScanID)
+			syms, _ := s.store.LoadSymbols(r1.LatestScanID)
+			rels, _ := s.store.LoadRelationships(r1.LatestScanID)
+
+			var nodes []model.GraphNode
+			var edges []model.GraphEdge
+
+			limit := 120
+			if len(syms) > limit {
+				syms = syms[:limit]
+			}
+			for _, sym := range syms {
+				nodes = append(nodes, model.GraphNode{
+					ID:         sym.ID,
+					Type:       string(sym.Kind),
+					Label:      sym.Name,
+					File:       sym.File,
+					Language:   sym.Language,
+					Complexity: sym.Complexity,
+				})
+			}
+			for i, rel := range rels {
+				edges = append(edges, model.GraphEdge{
+					ID:         fmt.Sprintf("e-%d", i),
+					Source:     rel.FromID,
+					Target:     rel.ToID,
+					Kind:       string(rel.Kind),
+					Confidence: rel.Confidence,
+				})
+			}
+			repoGraphs[r1.ID] = model.GraphData{Nodes: nodes, Edges: edges}
+
+			r1Endpoints := workspace.ExtractEndpoints(r1.ID, r1.Name, r1.Root, files)
+			r1Calls := workspace.ExtractAPICalls(r1.ID, r1.Name, r1.Root, files)
+
+			for _, r2 := range ws.Repos {
+				if r1.ID == r2.ID {
+					continue
+				}
+				r2Files, _ := s.store.LoadFiles(r2.LatestScanID)
+				r2Endpoints := workspace.ExtractEndpoints(r2.ID, r2.Name, r2.Root, r2Files)
+				r2Calls := workspace.ExtractAPICalls(r2.ID, r2.Name, r2.Root, r2Files)
+
+				links1 := workspace.ResolveCrossServiceLinks(r1, r1Calls, r2, r2Endpoints)
+				allLinks = append(allLinks, links1...)
+				links2 := workspace.ResolveCrossServiceLinks(r2, r2Calls, r1, r1Endpoints)
+				allLinks = append(allLinks, links2...)
+			}
+		}
+
+		dedup := make(map[string]bool)
+		var uniqueLinks []model.CrossServiceLink
+		for _, l := range allLinks {
+			if !dedup[l.ID] {
+				dedup[l.ID] = true
+				uniqueLinks = append(uniqueLinks, l)
+			}
+		}
+
+		compositeGraph := workspace.BuildCompositeGraph(*ws, repoGraphs, uniqueLinks)
+		writeJSON(w, http.StatusOK, compositeGraph)
+
+	default:
+		http.NotFound(w, r)
 	}
 }
 

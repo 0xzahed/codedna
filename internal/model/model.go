@@ -378,3 +378,49 @@ type BusinessLogicModule struct {
 	Confidence  float64  `json:"confidence"`
 }
 
+// Workspace models for multi-repository / cross-service intelligence
+type Workspace struct {
+	ID        int64              `json:"id"`
+	Name      string             `json:"name"`
+	RepoIDs   []int64            `json:"repoIds"`
+	Repos     []RepoInfo         `json:"repos,omitempty"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Links     []CrossServiceLink `json:"links,omitempty"`
+}
+
+type CrossServiceLink struct {
+	ID             string  `json:"id"`
+	SourceRepoID   int64   `json:"sourceRepoId"`
+	SourceRepoName string  `json:"sourceRepoName"`
+	SourceFile     string  `json:"sourceFile"`
+	SourceSymbol   string  `json:"sourceSymbol,omitempty"`
+	TargetRepoID   int64   `json:"targetRepoId"`
+	TargetRepoName string  `json:"targetRepoName"`
+	TargetFile     string  `json:"targetFile"`
+	TargetSymbol   string  `json:"targetSymbol,omitempty"`
+	HTTPMethod     string  `json:"httpMethod"`     // "GET", "POST", "PUT", "DELETE"
+	RoutePath      string  `json:"routePath"`      // e.g. "/api/v1/courses"
+	Confidence     float64 `json:"confidence"`
+	Description    string  `json:"description"`
+}
+
+type APIEndpoint struct {
+	RepoID   int64  `json:"repoId"`
+	RepoName string `json:"repoName"`
+	Method   string `json:"method"`
+	Path     string `json:"path"`
+	Handler  string `json:"handler"`
+	File     string `json:"file"`
+	Line     int    `json:"line"`
+}
+
+type APICallSite struct {
+	RepoID   int64  `json:"repoId"`
+	RepoName string `json:"repoName"`
+	Method   string `json:"method"`
+	Path     string `json:"path"`
+	Caller   string `json:"caller"`
+	File     string `json:"file"`
+	Line     int    `json:"line"`
+}
+

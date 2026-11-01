@@ -19,6 +19,8 @@ interface AppState {
   setScanId: (id: number) => void;
   activeRepoName: string;
   setActiveRepoName: (name: string) => void;
+  workspaceId: number | null;
+  setWorkspaceId: (id: number | null) => void;
   isScanning: boolean;
   setIsScanning: (scanning: boolean) => void;
   repoStats: RepoStats | null;
@@ -49,6 +51,8 @@ export const useAppStore = create<AppState>((set) => ({
     }
     set({ activeRepoName: name });
   },
+  workspaceId: null,
+  setWorkspaceId: (id) => set({ workspaceId: id }),
   isScanning: false,
   setIsScanning: (scanning) => set({ isScanning: scanning }),
   repoStats: null,

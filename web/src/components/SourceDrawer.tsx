@@ -27,7 +27,8 @@ export default function SourceDrawer() {
     }
 
     setLoading(true);
-    fetchFileContent(scanId, selectedNode.file)
+    const targetScanOrRepo = (selectedNode.data?.repoId as number) || scanId;
+    fetchFileContent(targetScanOrRepo, selectedNode.file)
       .then((res) => {
         setFileData(res);
       })
@@ -38,6 +39,18 @@ export default function SourceDrawer() {
         setLoading(false);
       });
   }, [selectedNode, scanId]);
+
+  useEffect(() => {
+    if (fileData && selectedNode?.line) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`L${selectedNode.line}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [fileData, selectedNode?.line]);
 
   if (!selectedNode) return null;
 

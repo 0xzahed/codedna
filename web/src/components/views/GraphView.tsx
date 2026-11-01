@@ -13,7 +13,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow';
 import { useAppStore } from '../../lib/store';
-import { fetchGraph, GraphNode, GraphEdge } from '../../lib/api';
+import { fetchGraph, fetchWorkspaceGraph, GraphNode, GraphEdge } from '../../lib/api';
 import { 
   Search, 
   Filter, 
@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 export default function GraphView() {
-  const { scanId, setSelectedNode } = useAppStore();
+  const { scanId, setSelectedNode, workspaceId, setWorkspaceId } = useAppStore();
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -37,16 +37,17 @@ export default function GraphView() {
   const [highlightCycle, setHighlightCycle] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Load graph data from API
+  // Load graph data from API (either single-repo or multi-repo workspace)
   useEffect(() => {
     setLoading(true);
-    fetchGraph(scanId)
+    const req = workspaceId ? fetchWorkspaceGraph(workspaceId) : fetchGraph(scanId);
+    req
       .then((data) => {
         setGraphData(data || { nodes: [], edges: [] });
       })
       .catch((err) => console.error('Failed to fetch graph:', err))
       .finally(() => setLoading(false));
-  }, [scanId]);
+  }, [scanId, workspaceId]);
 
   // Compute layout & React Flow nodes/edges
   useEffect(() => {
@@ -108,6 +109,11 @@ export default function GraphView() {
                 }`}>
                   {gn.type}
                 </span>
+                {gn.data?.service && (
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 truncate max-w-[90px]">
+                    {String(gn.data.service)}
+                  </span>
+                )}
                 {isHighComplexity && (
                   <span className="flex items-center text-[10px] font-mono text-dna-rose">
                     <Flame className="w-3 h-3 mr-0.5" />
@@ -141,20 +147,26 @@ export default function GraphView() {
     // Filter edges connecting existing nodes
     const rfEdges: Edge[] = (graphData.edges || [])
       .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
-      .map((ge) => ({
-        id: ge.id,
-        source: ge.source,
-        target: ge.target,
-        animated: ge.isRuntimeObserved || ge.confidence > 0.9,
-        style: {
-          stroke: ge.isRuntimeObserved ? '#38bdf8' : (ge.confidence > 0.8 ? '#34d399' : '#71717a'),
-          strokeWidth: ge.isRuntimeObserved ? 2 : 1.5,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: ge.isRuntimeObserved ? '#38bdf8' : (ge.confidence > 0.8 ? '#34d399' : '#71717a'),
-        },
-      }));
+      .map((ge) => {
+        const isCross = ge.kind === 'cross_service_api';
+        return {
+          id: ge.id,
+          source: ge.source,
+          target: ge.target,
+          animated: isCross || ge.isRuntimeObserved || ge.confidence > 0.9,
+          label: isCross ? ge.method : undefined,
+          labelStyle: isCross ? { fill: '#38bdf8', fontSize: 10, fontFamily: 'monospace' } : undefined,
+          style: {
+            stroke: isCross ? '#38bdf8' : ge.isRuntimeObserved ? '#38bdf8' : (ge.confidence > 0.8 ? '#34d399' : '#71717a'),
+            strokeWidth: isCross ? 2.5 : ge.isRuntimeObserved ? 2 : 1.5,
+            strokeDasharray: isCross ? '5,5' : undefined,
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: isCross ? '#38bdf8' : ge.isRuntimeObserved ? '#38bdf8' : (ge.confidence > 0.8 ? '#34d399' : '#71717a'),
+          },
+        };
+      });
 
     setNodes(rfNodes);
     setEdges(rfEdges);
@@ -196,6 +208,20 @@ export default function GraphView() {
               </button>
             ))}
           </div>
+
+          {workspaceId && (
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 text-xs font-mono text-sky-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
+              <span>Full-System Architecture Active</span>
+              <button
+                onClick={() => setWorkspaceId(null)}
+                className="ml-1 px-1 text-zinc-400 hover:text-white rounded hover:bg-charcoal-700"
+                title="Return to single repo view"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* View Layout Controls */}
