@@ -384,15 +384,159 @@ CodeDNA's multi-core parallel pipeline delivers industry-leading throughput by s
 
 ---
 
-## 🔒 Security & Privacy
+## 📦 Installation
 
-- **No Remote Transmission**: All parsing, graph construction, and analytics happen locally.
-- **Safe Scanning**: Never automatically executes untrusted repository code.
-- **Path Traversal Protection**: All filesystem endpoints validate boundaries against the repository root.
-- **Credential Redaction**: Sanitizes embedded tokens from remote Git URLs.
+### Option 1: Pre-compiled Binaries (Recommended)
+
+Download the release binary matching your operating system and CPU architecture from the [GitHub Releases](https://github.com/0xzahed/codedna/releases) page:
+
+```bash
+# Linux x86_64
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-linux-amd64.tar.gz | tar -xz
+sudo mv codedna /usr/local/bin/codedna
+
+# Linux ARM64
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-linux-arm64.tar.gz | tar -xz
+sudo mv codedna /usr/local/bin/codedna
+
+# macOS Apple Silicon (M1/M2/M3/M4)
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-arm64.tar.gz | tar -xz
+sudo mv codedna /usr/local/bin/codedna
+
+# macOS Intel
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-amd64.tar.gz | tar -xz
+sudo mv codedna /usr/local/bin/codedna
+```
+
+### Option 2: Via Go Install
+
+```bash
+go install github.com/0xzahed/codedna/cmd/codedna@latest
+```
+
+### Option 3: Build from Source
+
+```bash
+git clone https://github.com/0xzahed/codedna.git
+cd codedna
+
+# Build Go CLI binary and compile Next.js dashboard
+make all
+
+# Or build CLI binary only
+make build-cli
+
+# Run test suite to verify installation
+make test
+```
+
+---
+
+## 🛠️ Project Structure
+
+```text
+codedna/
+├── cmd/
+│   └── codedna/
+│       └── main.go                 # CLI entry point, argument parser, and command dispatcher
+├── internal/
+│   ├── ai/                         # Privacy-first local AI synthesis & prompt exporter
+│   │   ├── ai.go                   # Business logic classifier, Claude Code & Cursor exporter
+│   │   └── ai_test.go              # Privacy consent verification & context tests
+│   ├── analysis/                   # Graph algorithms & symbol dependency resolver
+│   │   ├── analysis.go             # Tarjan's SCC cycle detector, BFS reachability, dead code
+│   │   ├── graph.go                # Symbol and file-level graph node/edge constructors
+│   │   └── analysis_test.go        # Unit tests for SCC cycles and reachability
+│   ├── api/                        # Embedded HTTP REST & Server-Sent Events daemon
+│   │   ├── server.go               # Scan endpoints, file streaming, export handlers, SSE broker
+│   │   └── server_test.go          # API route integration tests
+│   ├── architecture/               # Architectural boundary & drift enforcement
+│   │   ├── architecture.go         # Declarative layer evaluator and health score calculator
+│   │   └── architecture_test.go    # Layer boundary violation test cases
+│   ├── engine/                     # Multi-core concurrent ingestion coordinator
+│   │   ├── engine.go               # 16-worker parallel AST pipeline and progress dispatcher
+│   │   └── engine_test.go          # Pipeline benchmarks and integration tests
+│   ├── impact/                     # Git diff blast-radius propagation engine
+│   │   ├── impact.go               # Diff line-to-symbol mapper and 0–100 risk scorer
+│   │   └── impact_test.go          # Blast radius and test selection verification
+│   ├── model/                      # Strongly-typed domain models & data schemas
+│   │   └── model.go                # Node, Edge, Scan, Cycle, Impact, and Report structs
+│   ├── parser/                     # Polyglot Tree-sitter C bindings & AST extractors
+│   │   ├── parse.go                # Go, Python, TypeScript, JavaScript, Java, PHP extractors
+│   │   └── spec.go                 # AST node extraction queries and capture rules
+│   ├── report/                     # Executive intelligence reports & diagram exporters
+│   │   ├── export.go               # Mermaid.js flowchart and C4 Component generators
+│   │   └── report.go               # Markdown and JSON executive summary builder
+│   ├── runtime/                    # Non-invasive runtime execution profiler
+│   │   └── runtime.go              # Trace ingest, microsecond metrics, static reconciliation
+│   ├── scanner/                    # Filesystem crawler, Git inspector & manifest auditor
+│   │   ├── dependencies.go         # Manifest parser (go.mod, package.json, requirements.txt)
+│   │   ├── frameworks.go           # Framework identifier (Next.js, FastAPI, Express, Django)
+│   │   └── scanner.go              # Local path & remote Git repository clone/resolve engine
+│   ├── store/                      # Embedded SQLite persistent storage tier
+│   │   └── store.go                # Schema migrations, scans, graph cache, and index queries
+│   ├── watcher/                    # Live filesystem hot-reloader
+│   │   └── watcher.go              # Incremental file change tracker and live indexer
+│   └── workspace/                  # Multi-repo & cross-service architectural linker
+│       └── workspace.go            # Frontend-to-backend REST route discovery and stitching
+├── web/                            # Next.js 14 + React Flow 11 Interactive Web Dashboard
+│   ├── src/
+│   │   ├── app/                    # 9 specialized intelligence dashboard routes
+│   │   │   ├── page.tsx            # Overview & System Health dashboard
+│   │   │   ├── graph/page.tsx      # React Flow interactive topological canvas
+│   │   │   ├── repo/page.tsx       # Monaco-style repository file tree & code inspector
+│   │   │   ├── dependencies/       # Dependency manifest matrix
+│   │   │   ├── runtime/page.tsx    # Runtime execution timeline & tracer
+│   │   │   ├── impact/page.tsx     # Change blast radius & Git diff risk analyzer
+│   │   │   ├── architecture/       # Architectural drift & layer compliance
+│   │   │   ├── ai/page.tsx         # AI assistant & context export interface
+│   │   │   └── settings/page.tsx   # Multi-repo workspace switcher & engine config
+│   │   └── components/             # Reusable UI widgets, modals, and SourceDrawer
+├── CHANGELOG.md                    # Chronological release log and feature history
+├── CONTRIBUTING.md                 # Contribution standards and development guidelines
+├── CODE_OF_CONDUCT.md              # Contributor Covenant v2.1 code of conduct
+├── Dockerfile                      # Multi-stage production container build
+├── docker-compose.yml              # Local containerized orchestration
+├── LICENSE                         # MIT Open Source License
+├── Makefile                        # Multi-platform build, test, and release targets
+├── README.md                       # Comprehensive project documentation
+├── SECURITY.md                     # Security vulnerability disclosure & safety policy
+└── TASKS.md                        # Feature-wise roadmap and task execution tracker
+```
+
+---
+
+## 🔒 Security, Local-First Guarantee & Privacy
+
+CodeDNA was architected from day one to operate in high-security, privacy-critical enterprise environments:
+
+* 🛡️ **Zero Remote Data Transmission:** All AST parsing, graph calculations, and database indexing execute 100% locally on your machine. No telemetry or source code ever leaves your environment.
+* ⚡ **Safe Static Analysis:** CodeDNA never executes untrusted repository code. It relies exclusively on static Tree-sitter AST queries and declarative manifest inspection.
+* 🚫 **Strict Path Traversal Protection:** All filesystem and source drawer APIs enforce strict root directory boundary checks to prevent arbitrary directory traversal.
+* 🔑 **Automatic Token Sanitization:** Git remote URLs containing embedded authentication tokens or credentials (e.g. `https://x-token@github.com/...`) are scrubbed before indexing and storage.
+* 🤖 **Opt-in AI Privacy Guard:** AI domain classification runs locally. Remote LLM queries require explicit user confirmation (`userConsent: true`), ensuring zero proprietary code is dispatched to external APIs.
+
+---
+
+## 🤝 Contributing
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**!
+
+Please check out our [Contributing Guide](CONTRIBUTING.md) to learn how to:
+1. Fork the Project and create your Feature Branch (`git checkout -b feat/AmazingFeature`)
+2. Run test suites and static analysis (`make test`, `make lint`)
+3. Commit your changes following [Conventional Commits](https://www.conventionalcommits.org/)
+4. Push to the Branch (`git push origin feat/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
 ## 📄 License
 
-CodeDNA is licensed under the [MIT License](LICENSE).
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+
+---
+
+<div align="center">
+  <sub>Crafted with ❤️ by <a href="https://github.com/0xzahed">Abu Zahed</a> and open-source contributors.</sub>
+</div>
