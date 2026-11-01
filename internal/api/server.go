@@ -238,10 +238,21 @@ func (s *Server) handleScanSubroutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scanID, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid scan id")
-		return
+	var scanID int64
+	if parts[0] == "latest" {
+		latestID, err := s.store.LatestScanID()
+		if err != nil || latestID == 0 {
+			writeError(w, http.StatusNotFound, "no scans found")
+			return
+		}
+		scanID = latestID
+	} else {
+		var err error
+		scanID, err = strconv.ParseInt(parts[0], 10, 64)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid scan id")
+			return
+		}
 	}
 
 	sub := ""

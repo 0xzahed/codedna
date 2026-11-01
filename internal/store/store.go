@@ -333,6 +333,22 @@ func (s *Store) LastScanID(repoID int64) (int64, error) {
 	return id.Int64, nil
 }
 
+// LatestScanID returns the newest completed scan across all repos, 0 when none.
+func (s *Store) LatestScanID() (int64, error) {
+	row := s.db.QueryRow(`SELECT MAX(id) FROM scans WHERE status = 'complete'`)
+	var id sql.NullInt64
+	if err := row.Scan(&id); err != nil {
+		return 0, err
+	}
+	if !id.Valid {
+		row2 := s.db.QueryRow(`SELECT MAX(id) FROM scans`)
+		if err := row2.Scan(&id); err != nil || !id.Valid {
+			return 0, nil
+		}
+	}
+	return id.Int64, nil
+}
+
 // LoadSymbols returns all symbols for a scan.
 func (s *Store) LoadSymbols(scanID int64) ([]model.Symbol, error) {
 	rows, err := s.db.Query(`SELECT sid, file_path, kind, name, qualified_name, line, col, end_line,

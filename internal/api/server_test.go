@@ -114,6 +114,22 @@ func TestScanAndGraphEndpoints(t *testing.T) {
 	if wBad.Code != http.StatusForbidden {
 		t.Errorf("Expected 403 Forbidden for path traversal, got %d", wBad.Code)
 	}
+
+	// 5. Query using 'latest' alias
+	latestGraphReq := httptest.NewRequest("GET", "/api/scans/latest/graph", nil)
+	wLatest := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wLatest, latestGraphReq)
+	if wLatest.Code != http.StatusOK {
+		t.Fatalf("Query using 'latest' alias failed with code %d: %s", wLatest.Code, wLatest.Body.String())
+	}
+
+	// 6. Query export using 'latest' alias
+	exportReq := httptest.NewRequest("GET", "/api/scans/latest/export?format=mermaid", nil)
+	wExport := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wExport, exportReq)
+	if wExport.Code != http.StatusOK {
+		t.Fatalf("Export with 'latest' alias failed with code %d: %s", wExport.Code, wExport.Body.String())
+	}
 }
 
 func TestRuntimeEventsAndReport(t *testing.T) {
