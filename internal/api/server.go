@@ -29,6 +29,7 @@ import (
 	"github.com/codedna/codedna/internal/report"
 	"github.com/codedna/codedna/internal/runtime"
 	"github.com/codedna/codedna/internal/store"
+	"github.com/codedna/codedna/internal/sysdesign"
 	"github.com/codedna/codedna/internal/watcher"
 	"github.com/codedna/codedna/internal/workspace"
 )
@@ -291,6 +292,10 @@ func (s *Server) handleScanSubroutes(w http.ResponseWriter, r *http.Request) {
 		s.handleScanRefactor(w, r, scanID)
 	case "knowledge", "blame":
 		s.handleScanKnowledge(w, r, scanID)
+	case "system-design", "design":
+		s.handleScanSystemDesign(w, r, scanID)
+	case "patterns":
+		s.handleScanPatterns(w, r, scanID)
 	default:
 		http.NotFound(w, r)
 	}
@@ -961,6 +966,52 @@ func (s *Server) handleScanKnowledge(w http.ResponseWriter, r *http.Request, sca
 	}
 
 	writeJSON(w, http.StatusOK, km)
+}
+
+func (s *Server) handleScanSystemDesign(w http.ResponseWriter, r *http.Request, scanID int64) {
+	files, err := s.store.LoadFiles(scanID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load files: "+err.Error())
+		return
+	}
+	syms, err := s.store.LoadSymbols(scanID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load symbols: "+err.Error())
+		return
+	}
+	rels, err := s.store.LoadRelationships(scanID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load relationships: "+err.Error())
+		return
+	}
+
+	report := sysdesign.AnalyzeSystemDesign(files, syms, rels)
+	writeJSON(w, http.StatusOK, report)
+}
+
+func (s *Server) handleScanPatterns(w http.ResponseWriter, r *http.Request, scanID int64) {
+	files, err := s.store.LoadFiles(scanID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load files: "+err.Error())
+		return
+	}
+	syms, err := s.store.LoadSymbols(scanID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load symbols: "+err.Error())
+		return
+	}
+	rels, err := s.store.LoadRelationships(scanID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load relationships: "+err.Error())
+		return
+	}
+
+	patterns := sysdesign.DetectPatterns(files, syms, rels)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"scanId":   scanID,
+		"patterns": patterns,
+		"total":    len(patterns),
+	})
 }
 
 func (s *Server) handleRuntimeEvents(w http.ResponseWriter, r *http.Request) {
