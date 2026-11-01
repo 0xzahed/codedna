@@ -27,7 +27,7 @@ import (
 	"github.com/codedna/codedna/internal/watcher"
 )
 
-const version = "2.0.0"
+const version = "2.2.0"
 
 func main() {
 	if len(os.Args) < 2 {
