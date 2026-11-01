@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 export default function OverviewView() {
-  const { scanId, setActiveTab, setSelectedNode, activeRepoName } = useAppStore();
+  const { scanId, setActiveTab, setSelectedNode, activeRepoName, refreshKey } = useAppStore();
   const [stats, setStats] = useState<RepoStats | null>(null);
   const [issues, setIssues] = useState<IssueItem[]>([]);
   const [arch, setArch] = useState<ArchReport | null>(null);
@@ -53,7 +53,7 @@ export default function OverviewView() {
         }
       })
       .catch((err) => console.error(err));
-  }, [scanId]);
+  }, [scanId, refreshKey]);
 
   const cycles = (issues || []).filter((i) => i.kind === 'circular-dependency');
   const hotspots = (issues || []).filter((i) => i.kind === 'complexity-hotspot').slice(0, 8);

@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 
 export default function GraphView() {
-  const { scanId, setSelectedNode, workspaceId, setWorkspaceId } = useAppStore();
+  const { scanId, setSelectedNode, workspaceId, setWorkspaceId, refreshKey } = useAppStore();
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -104,7 +104,7 @@ export default function GraphView() {
       })
       .catch((err) => console.error('Failed to fetch graph:', err))
       .finally(() => setLoading(false));
-  }, [scanId, workspaceId]);
+  }, [scanId, workspaceId, refreshKey]);
 
   // Compute layout & React Flow nodes/edges
   useEffect(() => {

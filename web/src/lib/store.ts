@@ -31,6 +31,10 @@ interface AppState {
   setSelectedFile: (file: string | null) => void;
   fileContent: string | null;
   setFileContent: (content: string | null) => void;
+  refreshKey: number;
+  triggerRefresh: () => void;
+  lastLiveUpdate: { message: string; timestamp: number } | null;
+  setLastLiveUpdate: (update: { message: string; timestamp: number } | null) => void;
   theme: 'dark';
 }
 
@@ -63,5 +67,9 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedFile: (file) => set({ selectedFile: file }),
   fileContent: null,
   setFileContent: (content) => set({ fileContent: content }),
+  refreshKey: 0,
+  triggerRefresh: () => set((state) => ({ refreshKey: state.refreshKey + 1 })),
+  lastLiveUpdate: null,
+  setLastLiveUpdate: (update) => set({ lastLiveUpdate: update }),
   theme: 'dark',
 }));

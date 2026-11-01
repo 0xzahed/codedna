@@ -87,13 +87,16 @@ This document tracks all features, bug fixes, performance optimizations, and arc
 ## 📌 Active & Upcoming Roadmap Tasks
 
 ### Milestone 4: Real-Time Live Watcher & AI Architecture Refactoring (v2.3.0)
+- [x] **Task 4.1 — Real-Time Live Hot-Reloading Watcher & Incremental AST Re-Indexing:**
+  - Automated file modification listener with code-file filtering (`.go`, `.ts`, `.py`, `.java`, etc.).
+  - Automatic incremental background re-indexing with synchronization locks and store updates.
+  - Rich SSE event stream broadcasting `files_changed` with file list, duration, symbol count, and scan ID.
+  - Real-time frontend standing listener with pulsing live notification pill and reactive tab re-rendering.
 - [x] **Task 4.2 — Custom Architectural Rules Editor in UI & Dynamic Layer Enforcement:**
   - Added rule persistence engine (`SaveRules`, `AddRule`, `DeleteRule`, `ResetRules`) targeting `.codedna/architecture.json`.
   - Added REST endpoints: `GET /api/scans/:id/architecture`, `POST /api/scans/:id/architecture/rules`, `DELETE /api/scans/:id/architecture/rules/:ruleId`, `POST /api/scans/:id/architecture/rules/reset`.
   - Interactive Rule Builder in `ArchitectureView.tsx` with presets (Clean Architecture, Domain Isolation, UI Purity), glob patterns, and live re-scoring.
   - Visualized Tarjan SCC circular dependency clusters and layer health penalty impact.
-- [ ] **Task 4.1 — Real-Time Live Hot-Reloading Watcher:**
-  - Automatically re-parse modified files incrementally and push live delta updates over SSE without full re-scan.
 - [ ] **Task 4.3 — AI-Powered Architecture Refactoring Suggestions:**
   - Use Ollama / Local LLM to suggest refactoring steps for detected circular dependencies and layer violations.
 

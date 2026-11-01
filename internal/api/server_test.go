@@ -2,12 +2,15 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/codedna/codedna/internal/ai"
 	"github.com/codedna/codedna/internal/model"
@@ -247,5 +250,38 @@ func TestArchitectureRulesEndpoints(t *testing.T) {
 	srv.Handler().ServeHTTP(wReset, reqReset)
 	if wReset.Code != http.StatusOK {
 		t.Fatalf("POST /architecture/rules/reset failed: %d %s", wReset.Code, wReset.Body.String())
+	}
+}
+
+func TestServerWatcherReindexing(t *testing.T) {
+	srv, tmpDir, st := setupTestServer(t)
+	defer st.Close()
+
+	ch := srv.AddSSEListener()
+	defer srv.RemoveSSEListener(ch)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	srv.StartWatcher(ctx)
+
+	// Wait for watcher snapshot
+	time.Sleep(150 * time.Millisecond)
+
+	// Modify test file
+	os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\n\nfunc Updated() {\n\tprintln(\"updated\")\n}\n"), 0o644)
+
+	// Wait for SSE broadcast
+	received := false
+	timeout := time.After(3 * time.Second)
+	for !received {
+		select {
+		case msg := <-ch:
+			if strings.Contains(msg, "files_changed") || strings.Contains(msg, "scan_completed") {
+				received = true
+			}
+		case <-timeout:
+			t.Fatal("Timeout waiting for live watcher SSE notification")
+		}
 	}
 }

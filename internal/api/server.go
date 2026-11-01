@@ -43,6 +43,7 @@ type Server struct {
 	lastScanID int64
 	repoRoot   string
 	mux        *http.ServeMux
+	reindexMu  sync.Mutex
 }
 
 // Config specifies server options.
@@ -1136,6 +1137,23 @@ func (s *Server) broadcastSSE(msg string) {
 	}
 }
 
+// AddSSEListener subscribes a channel to server-sent events (useful for tests and integrations).
+func (s *Server) AddSSEListener() chan string {
+	ch := make(chan string, 16)
+	s.sseMu.Lock()
+	s.sseClients[ch] = true
+	s.sseMu.Unlock()
+	return ch
+}
+
+// RemoveSSEListener unsubscribes and closes an SSE listener channel.
+func (s *Server) RemoveSSEListener(ch chan string) {
+	s.sseMu.Lock()
+	delete(s.sseClients, ch)
+	close(ch)
+	s.sseMu.Unlock()
+}
+
 func (s *Server) handleWorkspaces(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -1373,10 +1391,49 @@ func (s *Server) handleWorkspaceSubroutes(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// StartWatcher attaches directory watching with SSE notifications.
+// StartWatcher attaches directory watching with live incremental re-indexing and SSE delta broadcasts.
 func (s *Server) StartWatcher(ctx context.Context) {
 	s.watcher = watcher.New(s.repoRoot, 1*time.Second, func(changed []string) {
-		s.broadcastSSE(fmt.Sprintf(`{"type":"files_changed","files":%s}`, toJSONString(changed)))
+		// Filter out noise / non-code files
+		var codeFiles []string
+		for _, f := range changed {
+			ext := strings.ToLower(filepath.Ext(f))
+			switch ext {
+			case ".go", ".ts", ".tsx", ".js", ".jsx", ".py", ".java", ".php", ".json", ".rs", ".c", ".cpp", ".h":
+				codeFiles = append(codeFiles, f)
+			}
+		}
+
+		if len(codeFiles) == 0 {
+			return
+		}
+
+		go func() {
+			s.reindexMu.Lock()
+			defer s.reindexMu.Unlock()
+
+			res, err := engine.Run(s.repoRoot, s.store, nil)
+			if err != nil {
+				s.broadcastSSE(fmt.Sprintf(`{"type":"files_changed","files":%s,"error":%q}`, toJSONString(codeFiles), err.Error()))
+				return
+			}
+
+			s.lastScanID = res.ScanID
+			payload := map[string]interface{}{
+				"type":          "files_changed",
+				"files":         codeFiles,
+				"count":         len(codeFiles),
+				"scanId":        res.ScanID,
+				"repoId":        res.RepoID,
+				"symbolsFound":  res.Stats.SymbolsFound,
+				"relationships": res.Stats.Relationships,
+				"filesParsed":   res.Stats.FilesParsed,
+				"duration":      res.Stats.Duration,
+				"timestamp":     time.Now().Unix(),
+			}
+			s.broadcastSSE(toJSONString(payload))
+			s.broadcastSSE(fmt.Sprintf(`{"type":"scan_completed","scanId":%d,"repoId":%d}`, res.ScanID, res.RepoID))
+		}()
 	})
 	go s.watcher.Start(ctx)
 }

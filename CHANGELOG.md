@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Real-Time Live Watcher & Incremental Re-Indexing**: Background directory file watcher that filters code-file modifications, triggers synchronized background re-indexing, and streams rich SSE events (`files_changed`).
+- **Reactive Web Live-Reload**: Persistent SSE connection in the web dashboard with instant notification pill (`⚡ Live: X file(s) re-indexed`) and reactive canvas/overview re-render without page refresh.
 - **Custom Architectural Rule Builder**: Interactive UI and REST API to create, customize, and enforce architectural boundary rules (e.g. `Domain ↛ Controllers`, `Controllers ↛ Store`) directly from the Web Dashboard.
 - **Dynamic Rule Persistence**: Full persistence engine saving rules to `.codedna/architecture.json` with fallback to clean architecture defaults (`GET/POST/DELETE /api/scans/:id/architecture/rules`).
 - **Live Layer Health Re-scoring**: Instant re-evaluation of layer health scores, boundary violations, and rule penalties upon saving or deleting constraints.
