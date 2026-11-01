@@ -170,7 +170,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"status":    "healthy",
 		"service":   "codedna",
-		"version":   "2.2.0",
+		"version":   "2.3.0",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 		"repoRoot":  s.repoRoot,
 	})
