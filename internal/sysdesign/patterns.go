@@ -347,15 +347,20 @@ func detectCQRSPattern(files []model.FileNode, syms []model.Symbol) (model.Detec
 		}
 	}
 
-	if len(cmdSyms) < 2 || len(querySyms) < 2 {
+	if len(cmdSyms) == 0 || len(querySyms) == 0 {
 		return model.DetectedPattern{}, false
+	}
+
+	conf := 0.70
+	if len(cmdSyms) >= 2 && len(querySyms) >= 2 {
+		conf = 0.88
 	}
 
 	return model.DetectedPattern{
 		ID:          "pattern-cqrs",
 		Name:        "CQRS (Command Query Responsibility Segregation)",
 		Category:    model.PatternArchitectural,
-		Confidence:  0.78,
+		Confidence:  conf,
 		Description: "Segregates write operations (commands/mutations) from read operations (queries/lookups) into specialized execution paths.",
 		Evidence: []string{
 			fmt.Sprintf("Found %d write command symbols and %d read query symbols", len(cmdSyms), len(querySyms)),
