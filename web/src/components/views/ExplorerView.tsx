@@ -50,12 +50,12 @@ export default function ExplorerView() {
       .catch((err) => console.error(err));
   }, [selectedFile, scanId]);
 
-  const filteredFiles = files.filter((f) => 
-    f.path.toLowerCase().includes(search.toLowerCase()) || 
-    f.language.toLowerCase().includes(search.toLowerCase())
+  const filteredFiles = (Array.isArray(files) ? files : []).filter((f) => 
+    (f?.path || '').toLowerCase().includes(search.toLowerCase()) || 
+    (f?.language || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const fileSymbols = symbols.filter((s) => s.file === selectedFile?.path);
+  const fileSymbols = (Array.isArray(symbols) ? symbols : []).filter((s) => s?.file === selectedFile?.path);
   const codeLines = fileContent ? fileContent.split('\n') : [];
 
   return (

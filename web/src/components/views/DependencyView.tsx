@@ -80,7 +80,8 @@ export default function DependencyView() {
       {/* Dependencies by Ecosystem */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Object.entries(deps).map(([ecosystem, pkgList]) => {
-          const filtered = pkgList.filter((p) => p.toLowerCase().includes(search.toLowerCase()));
+          const list = Array.isArray(pkgList) ? pkgList : [];
+          const filtered = list.filter((p) => p.toLowerCase().includes(search.toLowerCase()));
           return (
             <div key={ecosystem} className="bg-charcoal-850 border border-charcoal-750 rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-charcoal-750 pb-3">

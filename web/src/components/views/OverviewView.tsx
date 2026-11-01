@@ -55,11 +55,11 @@ export default function OverviewView() {
       .catch((err) => console.error(err));
   }, [scanId]);
 
-  const cycles = issues.filter((i) => i.kind === 'circular-dependency');
-  const hotspots = issues.filter((i) => i.kind === 'complexity-hotspot').slice(0, 8);
-  const deadCode = issues.filter((i) => i.kind === 'dead-code').slice(0, 8);
+  const cycles = (issues || []).filter((i) => i.kind === 'circular-dependency');
+  const hotspots = (issues || []).filter((i) => i.kind === 'complexity-hotspot').slice(0, 8);
+  const deadCode = (issues || []).filter((i) => i.kind === 'dead-code').slice(0, 8);
 
-  const healthScore = Math.max(0, 100 - (cycles.length * 15) - (hotspots.length * 2) - ((arch?.violations.length || 0) * 4));
+  const healthScore = Math.max(0, 100 - (cycles.length * 15) - (hotspots.length * 2) - (((arch?.violations?.length) || 0) * 4));
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -136,7 +136,7 @@ export default function OverviewView() {
             <Layers className="w-4 h-4 text-dna-purple" />
           </div>
           <div className="text-3xl font-bold text-white font-mono">
-            {arch?.violations.length || 0}
+            {arch?.violations?.length || 0}
           </div>
           <div className="text-[11px] text-zinc-400 pt-1">
             Against {arch?.ruleCount || 3} configured boundaries
@@ -237,7 +237,7 @@ export default function OverviewView() {
                 onClick={() => setSelectedNode({ id: d.symbolId || '', type: 'function', label: d.title, file: d.file })}
                 className="p-3 bg-charcoal-900 border border-charcoal-750 rounded-lg cursor-pointer hover:border-charcoal-600 transition-all font-mono"
               >
-                <div className="text-xs font-semibold text-zinc-200 truncate">{d.title.replace('Dead code candidate: ', '')}</div>
+                <div className="text-xs font-semibold text-zinc-200 truncate">{(d?.title || '').replace('Dead code candidate: ', '').replace('Unchecked reference: ', '')}</div>
                 <div className="text-[10px] text-zinc-400 truncate mt-1">{d.file}</div>
               </div>
             ))}

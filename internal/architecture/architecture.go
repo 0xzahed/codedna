@@ -69,7 +69,9 @@ func LoadRules(repoRoot string) ([]model.ArchRule, error) {
 // CheckArchitecture evaluates relationships against architecture rules and cycle detection.
 func CheckArchitecture(rules []model.ArchRule, rels []model.Relationship, syms []model.Symbol, cycles []model.Issue) model.ArchHealthReport {
 	report := model.ArchHealthReport{
-		RuleCount: len(rules),
+		Violations: []model.ArchViolation{},
+		Cycles:     []model.CycleDetail{},
+		RuleCount:  len(rules),
 	}
 
 	symMap := make(map[string]model.Symbol)

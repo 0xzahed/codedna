@@ -79,7 +79,7 @@ export default function ImpactView() {
         <div>
           <div className="text-xs text-zinc-400">Risk Assessment</div>
           <div className={`text-4xl font-bold mt-1 ${riskColor}`}>
-            {report?.riskScore.toFixed(1) ?? '0.0'}
+            {report?.riskScore != null ? report.riskScore.toFixed(1) : '0.0'}
             <span className="text-xs text-zinc-500 font-normal uppercase ml-2">
               ({report?.riskLevel ?? 'info'})
             </span>
@@ -92,17 +92,17 @@ export default function ImpactView() {
         <div>
           <div className="text-xs text-zinc-400">Changed Files</div>
           <div className="text-2xl font-bold text-white mt-1">
-            {report?.changedFiles.length ?? 0}
+            {report?.changedFiles?.length ?? 0}
           </div>
           <div className="text-[11px] text-zinc-400 mt-2">
-            {report?.changedSymbols.length ?? 0} AST symbols modified
+            {report?.changedSymbols?.length ?? 0} AST symbols modified
           </div>
         </div>
 
         <div>
           <div className="text-xs text-zinc-400">Upstream Blast Radius</div>
           <div className="text-2xl font-bold text-dna-blue mt-1">
-            {report?.upstreamAffected.length ?? 0}
+            {report?.upstreamAffected?.length ?? 0}
           </div>
           <div className="text-[11px] text-zinc-400 mt-2">
             Dependent callers impacted
@@ -112,7 +112,7 @@ export default function ImpactView() {
         <div>
           <div className="text-xs text-zinc-400">Affected APIs &amp; Tests</div>
           <div className="text-2xl font-bold text-dna-amber mt-1">
-            {report?.affectedEndpoints.length ?? 0} / {report?.affectedTests.length ?? 0}
+            {report?.affectedEndpoints?.length ?? 0} / {report?.affectedTests?.length ?? 0}
           </div>
           <div className="text-[11px] text-zinc-400 mt-2">
             Endpoints / relevant tests

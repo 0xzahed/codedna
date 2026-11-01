@@ -132,8 +132,11 @@ func sortStrings(s []string) {
 }
 
 func unique(in []string) []string {
+	if len(in) == 0 {
+		return []string{}
+	}
 	seen := map[string]bool{}
-	out := in[:0]
+	out := []string{}
 	for _, s := range in {
 		if !seen[s] {
 			seen[s] = true

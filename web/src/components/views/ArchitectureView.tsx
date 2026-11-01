@@ -63,11 +63,11 @@ export default function ArchitectureView() {
 
         <div>
           <div className="text-xs text-zinc-400">Boundary Violations</div>
-          <div className={`text-3xl font-bold mt-1 ${(arch?.violations.length || 0) > 0 ? 'text-dna-rose' : 'text-emerald-400'}`}>
-            {arch?.violations.length ?? 0}
+          <div className={`text-3xl font-bold mt-1 ${(arch?.violations?.length || 0) > 0 ? 'text-dna-rose' : 'text-emerald-400'}`}>
+            {arch?.violations?.length ?? 0}
           </div>
           <p className="text-[11px] text-zinc-400 mt-2">
-            {arch?.violations.length === 0 ? 'All layer rules respected' : 'Action required to decouple'}
+            {(arch?.violations?.length || 0) === 0 ? 'All layer rules respected' : 'Action required to decouple'}
           </p>
         </div>
       </div>
@@ -79,7 +79,7 @@ export default function ArchitectureView() {
             <AlertTriangle className="w-4 h-4 text-dna-rose" />
             <span>Architectural Boundary Violations</span>
           </h3>
-          <span className="text-xs text-zinc-400">{arch?.violations.length ?? 0} violations found</span>
+          <span className="text-xs text-zinc-400">{arch?.violations?.length ?? 0} violations found</span>
         </div>
 
         {arch?.violations && arch.violations.length > 0 ? (

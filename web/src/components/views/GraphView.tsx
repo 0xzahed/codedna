@@ -10,6 +10,7 @@ import ReactFlow, {
   Node,
   Edge,
   MarkerType,
+  ReactFlowProvider,
 } from 'reactflow';
 import { useAppStore } from '../../lib/store';
 import { fetchGraph, GraphNode, GraphEdge } from '../../lib/api';
@@ -138,7 +139,7 @@ export default function GraphView() {
     });
 
     // Filter edges connecting existing nodes
-    const rfEdges: Edge[] = graphData.edges
+    const rfEdges: Edge[] = (graphData.edges || [])
       .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
       .map((ge) => ({
         id: ge.id,
@@ -235,23 +236,25 @@ export default function GraphView() {
             No graph nodes match current filters.
           </div>
         ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={onNodeClick}
-            fitView
-            minZoom={0.2}
-            maxZoom={2}
-          >
-            <Background color="#1b1c20" gap={20} size={1} />
-            <Controls />
-            <MiniMap 
-              nodeColor={() => '#38bdf8'}
-              maskColor="rgba(12, 13, 14, 0.7)"
-            />
-          </ReactFlow>
+          <ReactFlowProvider>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onNodeClick={onNodeClick}
+              fitView
+              minZoom={0.2}
+              maxZoom={2}
+            >
+              <Background color="#1b1c20" gap={20} size={1} />
+              <Controls />
+              <MiniMap 
+                nodeColor={() => '#38bdf8'}
+                maskColor="rgba(12, 13, 14, 0.7)"
+              />
+            </ReactFlow>
+          </ReactFlowProvider>
         )}
       </div>
     </div>

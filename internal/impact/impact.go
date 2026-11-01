@@ -130,8 +130,8 @@ func AnalyzeImpact(repoRoot string, baseRef string, diffs []FileDiff, idx *analy
 		fileMap[f.Path] = f
 	}
 
-	var changedFilePaths []string
-	var changedSymbols []model.ChangedSymbol
+	changedFilePaths := []string{}
+	changedSymbols := []model.ChangedSymbol{}
 	changedSymIDs := make(map[string]bool)
 	changedFileSet := make(map[string]bool)
 
@@ -198,13 +198,13 @@ func AnalyzeImpact(repoRoot string, baseRef string, diffs []FileDiff, idx *analy
 		}
 	}
 
-	var upstreamList []string
+	upstreamList := []string{}
 	for item := range upstreamAffected {
 		upstreamList = append(upstreamList, item)
 	}
 	report.UpstreamAffected = upstreamList
 
-	var downstreamList []string
+	downstreamList := []string{}
 	for item := range downstreamCalls {
 		downstreamList = append(downstreamList, item)
 	}
@@ -259,7 +259,7 @@ func identifyAffectedAPIs(changedSyms []model.ChangedSymbol, upstream []string, 
 		}
 	}
 
-	var apis []string
+	apis := []string{}
 	for a := range apiSet {
 		apis = append(apis, a)
 	}
@@ -300,7 +300,7 @@ func identifyAffectedTests(changedFiles []string, upstream []string, files []mod
 		}
 	}
 
-	var tests []string
+	tests := []string{}
 	for t := range testSet {
 		tests = append(tests, t)
 	}

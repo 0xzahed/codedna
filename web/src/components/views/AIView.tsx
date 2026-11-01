@@ -260,7 +260,7 @@ export default function AIView() {
             Discovered business functionality modules mapped from routes, controllers, and data models:
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {businessDomains.map((dom, i) => (
+            {(Array.isArray(businessDomains) ? businessDomains : []).map((dom, i) => (
               <div key={i} className="p-5 bg-charcoal-850 border border-charcoal-750 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
