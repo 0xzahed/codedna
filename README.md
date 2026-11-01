@@ -1,16 +1,51 @@
-# CodeDNA 2.0 🧬
+<div align="center">
 
-### *Understand Your Code. See Its DNA.*
+# 🧬 CodeDNA
 
-[![CI](https://github.com/codedna/codedna/actions/workflows/ci.yml/badge.svg)](https://github.com/codedna/codedna/actions)
-[![Go Report Card](https://goreportcard.com/badge/github.com/codedna/codedna)](https://goreportcard.com/report/github.com/codedna/codedna)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go)](https://go.dev)
+### Living Software Intelligence, Dynamic Call Graphs & Architectural Topology Platform in Go
+#### The Open-Source Codebase Cartography Engine for Modern Engineering Teams
+
+[![CI](https://github.com/0xzahed/codedna/actions/workflows/ci.yml/badge.svg)](https://github.com/0xzahed/codedna/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/0xzahed/codedna)](https://goreportcard.com/report/github.com/0xzahed/codedna)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/0xzahed/codedna)](https://golang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![React Flow](https://img.shields.io/badge/React_Flow-11.11-FF0072?logo=react)](https://reactflow.dev/)
+[![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)](https://www.sqlite.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Release](https://img.shields.io/github/v/release/0xzahed/codedna?include_prereleases)](https://github.com/0xzahed/codedna/releases)
 
-**CodeDNA** is an advanced open-source software intelligence platform that creates a living, interactive topological map of your codebase. It discovers how software components are structured, how they interact, how they behave at runtime, and how code changes affect the entire system.
+<p align="center">
+  <b>CodeDNA</b> is a lightning-fast, privacy-first software intelligence platform written in Go that constructs an interactive, living topological map of complex codebases. It combines <b>Tree-sitter AST parsing</b>, <b>cross-file call resolution</b>, <b>Tarjan's cycle detection</b>, <b>Git diff blast-radius propagation</b>, <b>architectural layer drift enforcement</b>, and a standalone <b>React Flow Web Intelligence Suite</b> with zero cloud dependencies.
+</p>
 
-This is **not** a basic visualization tool, and **not** an AI chatbot wrapper. It is a production-grade developer tool combining Tree-sitter AST parsing, Tarjan cycle detection, Git diff blast-radius propagation, runtime tracing, and privacy-first local AI assistance.
+[⚡ Quick Start](#-quick-start) •
+[🎯 The Problem](#-the-problem) •
+[⚡ The CodeDNA Engine](#-the-codedna-engine-architecture) •
+[📊 Feature Comparison](#-feature-comparison) •
+[🚀 Terminal Preview](#-terminal-preview) •
+[✨ Features](#-features) •
+[🖥️ Web Dashboard](#-web-dashboard-intelligence-suite) •
+[💻 CLI Reference](#-cli-commands--flag-matrix) •
+[🏗️ Architecture](#-system-architecture) •
+[🚀 Benchmarks](#-performance-benchmarks) •
+[📦 Installation](#-installation) •
+[🛠️ Project Structure](#-project-structure) •
+[🔒 Security & Privacy](#-security-local-first-guarantee--privacy) •
+[🤝 Contributing](#-contributing) •
+[📄 License](#-license)
+
+</div>
+
+---
+
+## 🎯 The Problem
+
+Modern software codebases grow rapidly in scale and intricacy, making architectural comprehension, refactoring, and code review perilous:
+1. **Monolithic Coupling & Invisible Spaghetti:** In large monorepos or multi-service architectures, components become deeply tangled through cross-file calls, transitive imports, and circular dependencies that traditional linters and grep cannot visualize.
+2. **Blind Refactoring & Unpredicted Blast Radius:** Changing a signature, refactoring an internal service, or modifying database schemas often triggers cascading regressions across distant upstream callers or downstream consumers with zero warning during code review.
+3. **Architectural Erosion & Layer Drift:** Even when engineering teams establish Clean Architecture, Domain-Driven Design (DDD), or Hexagonal boundaries on paper, codebases steadily erode as developers inadvertently import presentation/database models into pure domain layers.
+4. **Cloud Privacy & Security Exposure:** Existing codebase visualizers and AI analysis platforms mandate uploading proprietary source code to external SaaS servers, creating severe compliance, regulatory, and intellectual property liabilities.
 
 ---
 
