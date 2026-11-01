@@ -36,7 +36,7 @@ func AnalyzeSystemDesign(files []model.FileNode, syms []model.Symbol, rels []mod
 
 // DetectPatterns recognizes classic Gang of Four and modern distributed/architectural patterns.
 func DetectPatterns(files []model.FileNode, syms []model.Symbol, rels []model.Relationship) []model.DetectedPattern {
-	var patterns []model.DetectedPattern
+	patterns := make([]model.DetectedPattern, 0)
 
 	if p, ok := detectRepositoryPattern(files, syms); ok {
 		patterns = append(patterns, p)

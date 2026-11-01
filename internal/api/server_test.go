@@ -340,3 +340,55 @@ func TestScanKnowledgeEndpoint(t *testing.T) {
 		t.Fatalf("Failed to decode knowledge response: %v", err)
 	}
 }
+
+func TestScanSystemDesignEndpoint(t *testing.T) {
+	srv, _, st := setupTestServer(t)
+	defer st.Close()
+
+	// Initial scan
+	scanReq := httptest.NewRequest("POST", "/api/repos/scan", bytes.NewReader([]byte("{}")))
+	wInit := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wInit, scanReq)
+	if wInit.Code != http.StatusOK {
+		t.Fatalf("Scan failed: %d %s", wInit.Code, wInit.Body.String())
+	}
+
+	// 1. Query System Design endpoint
+	designReq := httptest.NewRequest("GET", "/api/scans/1/system-design", nil)
+	wDesign := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wDesign, designReq)
+	if wDesign.Code != http.StatusOK {
+		t.Fatalf("GET /system-design failed: %d %s", wDesign.Code, wDesign.Body.String())
+	}
+
+	var report model.SystemDesignReport
+	if err := json.NewDecoder(wDesign.Body).Decode(&report); err != nil {
+		t.Fatalf("Failed to decode system design response: %v", err)
+	}
+
+	if len(report.Tiers) != 6 {
+		t.Errorf("Expected 6 tiers, got %d", len(report.Tiers))
+	}
+	if report.ArchitectureStyle == "" {
+		t.Errorf("Expected non-empty architecture style")
+	}
+	if report.ReliabilityScore <= 0 {
+		t.Errorf("Expected positive reliability score, got %f", report.ReliabilityScore)
+	}
+
+	// 2. Query Patterns endpoint
+	patReq := httptest.NewRequest("GET", "/api/scans/1/patterns", nil)
+	wPat := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wPat, patReq)
+	if wPat.Code != http.StatusOK {
+		t.Fatalf("GET /patterns failed: %d %s", wPat.Code, wPat.Body.String())
+	}
+
+	var patRes map[string]interface{}
+	if err := json.NewDecoder(wPat.Body).Decode(&patRes); err != nil {
+		t.Fatalf("Failed to decode patterns response: %v", err)
+	}
+	if patRes["patterns"] == nil {
+		t.Errorf("Expected patterns array in response")
+	}
+}

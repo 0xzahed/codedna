@@ -137,7 +137,7 @@ func ComputeDataFlow(rels []model.Relationship, syms []model.Symbol) []model.Dat
 		}
 	}
 
-	var hops []model.DataFlowHop
+	hops := make([]model.DataFlowHop, 0)
 	for key, count := range hopCounts {
 		protocol := determineProtocol(key.from, key.to)
 		hops = append(hops, model.DataFlowHop{
