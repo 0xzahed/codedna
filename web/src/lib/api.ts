@@ -99,6 +99,16 @@ export interface ImpactReport {
   summary: string;
 }
 
+export interface ArchRule {
+  id: string;
+  name: string;
+  fromPattern: string;
+  toPattern: string;
+  forbidden: boolean;
+  description: string;
+  severity: 'info' | 'low' | 'medium' | 'high';
+}
+
 export interface ArchReport {
   violations: Array<{
     ruleId: string;
@@ -114,6 +124,7 @@ export interface ArchReport {
   cycles: Array<{ files: string[]; chain: string }>;
   layerHealthScore: number;
   ruleCount: number;
+  rules?: ArchRule[];
 }
 
 export interface RuntimeSummary {
@@ -216,6 +227,38 @@ export async function fetchImpact(scanId: number = 1, base: string = 'main'): Pr
 
 export async function fetchArchitecture(scanId: number = 1): Promise<ArchReport> {
   const res = await fetch(`${API_BASE}/api/scans/${scanId}/architecture`);
+  return res.json();
+}
+
+export async function addArchRule(scanId: number = 1, rule: Partial<ArchRule>): Promise<ArchReport> {
+  const res = await fetch(`${API_BASE}/api/scans/${scanId}/architecture/rules`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rule),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to add architectural rule');
+  }
+  return res.json();
+}
+
+export async function deleteArchRule(scanId: number = 1, ruleId: string): Promise<ArchReport> {
+  const res = await fetch(`${API_BASE}/api/scans/${scanId}/architecture/rules/${encodeURIComponent(ruleId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error('Failed to delete architectural rule');
+  }
+  return res.json();
+}
+
+export async function resetArchRules(scanId: number = 1): Promise<ArchReport> {
+  const res = await fetch(`${API_BASE}/api/scans/${scanId}/architecture/rules/reset`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    throw new Error('Failed to reset architectural rules');
+  }
   return res.json();
 }
 

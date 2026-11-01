@@ -71,3 +71,58 @@ func TestPatternMatching(t *testing.T) {
 		t.Error("Expected match for controllers/*")
 	}
 }
+
+func TestRulePersistenceAndLifecycle(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// 1. Initial load should return default rules
+	rules, err := LoadRules(tempDir)
+	if err != nil {
+		t.Fatalf("LoadRules failed: %v", err)
+	}
+	initialCount := len(rules)
+	if initialCount == 0 {
+		t.Fatal("Expected default rules, got 0")
+	}
+
+	// 2. Add custom rule
+	newRule := model.ArchRule{
+		Name:        "Services ↛ Controllers",
+		FromPattern: "**/services/**",
+		ToPattern:   "**/controllers/**",
+		Forbidden:   true,
+		Description: "Services layer must never invoke controllers",
+		Severity:    model.SevHigh,
+	}
+
+	updated, err := AddRule(tempDir, newRule)
+	if err != nil {
+		t.Fatalf("AddRule failed: %v", err)
+	}
+	if len(updated) != initialCount+1 {
+		t.Fatalf("Expected %d rules, got %d", initialCount+1, len(updated))
+	}
+
+	addedID := updated[len(updated)-1].ID
+	if addedID == "" {
+		t.Fatal("Expected auto-generated rule ID")
+	}
+
+	// 3. Delete the newly added rule
+	afterDel, err := DeleteRule(tempDir, addedID)
+	if err != nil {
+		t.Fatalf("DeleteRule failed: %v", err)
+	}
+	if len(afterDel) != initialCount {
+		t.Fatalf("Expected %d rules after deletion, got %d", initialCount, len(afterDel))
+	}
+
+	// 4. Reset rules
+	resetted, err := ResetRules(tempDir)
+	if err != nil {
+		t.Fatalf("ResetRules failed: %v", err)
+	}
+	if len(resetted) != len(DefaultRules()) {
+		t.Fatalf("Expected %d default rules after reset, got %d", len(DefaultRules()), len(resetted))
+	}
+}

@@ -179,3 +179,73 @@ func TestRuntimeEventsAndReport(t *testing.T) {
 		t.Errorf("Unexpected report content")
 	}
 }
+
+func TestArchitectureRulesEndpoints(t *testing.T) {
+	srv, _, st := setupTestServer(t)
+	defer st.Close()
+
+	// Trigger initial scan to set up repo and scan #1
+	scanReq := httptest.NewRequest("POST", "/api/repos/scan", bytes.NewReader([]byte("{}")))
+	wInit := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wInit, scanReq)
+	if wInit.Code != http.StatusOK {
+		t.Fatalf("Initial scan failed: %d %s", wInit.Code, wInit.Body.String())
+	}
+
+	// 1. GET architecture report
+	req := httptest.NewRequest("GET", "/api/scans/1/architecture", nil)
+	w := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /architecture failed: %d %s", w.Code, w.Body.String())
+	}
+	var rep model.ArchHealthReport
+	if err := json.NewDecoder(w.Body).Decode(&rep); err != nil {
+		t.Fatalf("Decode failed: %v", err)
+	}
+	initRuleCount := rep.RuleCount
+
+	// 2. POST new custom architecture rule
+	newRule := model.ArchRule{
+		ID:          "custom-db-protect",
+		Name:        "Direct DB Isolation",
+		FromPattern: "**/web/**",
+		ToPattern:   "**/db/**",
+		Forbidden:   true,
+		Severity:    model.SevHigh,
+		Description: "Web routes cannot directly reach DB",
+	}
+	body, _ := json.Marshal(newRule)
+	reqPost := httptest.NewRequest("POST", "/api/scans/1/architecture/rules", bytes.NewReader(body))
+	wPost := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wPost, reqPost)
+	if wPost.Code != http.StatusOK {
+		t.Fatalf("POST /architecture/rules failed: %d %s", wPost.Code, wPost.Body.String())
+	}
+	var repAfterAdd model.ArchHealthReport
+	json.NewDecoder(wPost.Body).Decode(&repAfterAdd)
+	if repAfterAdd.RuleCount != initRuleCount+1 {
+		t.Errorf("Expected %d rules after addition, got %d", initRuleCount+1, repAfterAdd.RuleCount)
+	}
+
+	// 3. DELETE custom architecture rule
+	reqDel := httptest.NewRequest("DELETE", "/api/scans/1/architecture/rules/custom-db-protect", nil)
+	wDel := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wDel, reqDel)
+	if wDel.Code != http.StatusOK {
+		t.Fatalf("DELETE /architecture/rules/custom-db-protect failed: %d %s", wDel.Code, wDel.Body.String())
+	}
+	var repAfterDel model.ArchHealthReport
+	json.NewDecoder(wDel.Body).Decode(&repAfterDel)
+	if repAfterDel.RuleCount != initRuleCount {
+		t.Errorf("Expected %d rules after delete, got %d", initRuleCount, repAfterDel.RuleCount)
+	}
+
+	// 4. Reset rules
+	reqReset := httptest.NewRequest("POST", "/api/scans/1/architecture/rules/reset", nil)
+	wReset := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wReset, reqReset)
+	if wReset.Code != http.StatusOK {
+		t.Fatalf("POST /architecture/rules/reset failed: %d %s", wReset.Code, wReset.Body.String())
+	}
+}

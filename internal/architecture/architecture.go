@@ -4,10 +4,12 @@ package architecture
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/codedna/codedna/internal/analysis"
 	"github.com/codedna/codedna/internal/model"
@@ -66,12 +68,89 @@ func LoadRules(repoRoot string) ([]model.ArchRule, error) {
 	return DefaultRules(), nil
 }
 
+// SaveRules persists architecture rules into .codedna/architecture.json in repoRoot.
+func SaveRules(repoRoot string, rules []model.ArchRule) error {
+	dir := filepath.Join(repoRoot, ".codedna")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(rules, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "architecture.json"), data, 0644)
+}
+
+// AddRule appends or updates an architecture rule and persists the rule set.
+func AddRule(repoRoot string, rule model.ArchRule) ([]model.ArchRule, error) {
+	rules, err := LoadRules(repoRoot)
+	if err != nil {
+		rules = DefaultRules()
+	}
+
+	if rule.ID == "" {
+		slug := strings.ToLower(rule.Name)
+		slug = strings.ReplaceAll(slug, " ", "-")
+		if slug == "" {
+			slug = "rule"
+		}
+		rule.ID = fmt.Sprintf("%s-%d", slug, time.Now().UnixNano()%10000)
+	}
+
+	found := false
+	for i, r := range rules {
+		if r.ID == rule.ID {
+			rules[i] = rule
+			found = true
+			break
+		}
+	}
+	if !found {
+		rules = append(rules, rule)
+	}
+
+	if err := SaveRules(repoRoot, rules); err != nil {
+		return rules, err
+	}
+	return rules, nil
+}
+
+// DeleteRule removes a rule by ID and saves the updated rule set.
+func DeleteRule(repoRoot string, ruleID string) ([]model.ArchRule, error) {
+	rules, err := LoadRules(repoRoot)
+	if err != nil {
+		rules = DefaultRules()
+	}
+
+	var updated []model.ArchRule
+	for _, r := range rules {
+		if r.ID != ruleID {
+			updated = append(updated, r)
+		}
+	}
+
+	if err := SaveRules(repoRoot, updated); err != nil {
+		return updated, err
+	}
+	return updated, nil
+}
+
+// ResetRules restores default architectural rules.
+func ResetRules(repoRoot string) ([]model.ArchRule, error) {
+	defaults := DefaultRules()
+	if err := SaveRules(repoRoot, defaults); err != nil {
+		return defaults, err
+	}
+	return defaults, nil
+}
+
 // CheckArchitecture evaluates relationships against architecture rules and cycle detection.
 func CheckArchitecture(rules []model.ArchRule, rels []model.Relationship, syms []model.Symbol, cycles []model.Issue) model.ArchHealthReport {
 	report := model.ArchHealthReport{
 		Violations: []model.ArchViolation{},
 		Cycles:     []model.CycleDetail{},
 		RuleCount:  len(rules),
+		Rules:      rules,
 	}
 
 	symMap := make(map[string]model.Symbol)

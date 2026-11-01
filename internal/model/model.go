@@ -353,6 +353,7 @@ type ArchHealthReport struct {
 	Cycles           []CycleDetail   `json:"cycles"`
 	LayerHealthScore float64         `json:"layerHealthScore"` // 0-100
 	RuleCount        int             `json:"ruleCount"`
+	Rules            []ArchRule      `json:"rules,omitempty"`
 }
 
 // AI Context & Assistance models

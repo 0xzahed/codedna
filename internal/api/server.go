@@ -851,6 +851,47 @@ func (s *Server) handleScanArchitecture(w http.ResponseWriter, r *http.Request, 
 		rules = architecture.DefaultRules()
 	}
 
+	// Dynamic rule modifications: /api/scans/:id/architecture/rules...
+	if strings.Contains(r.URL.Path, "/architecture/rules") {
+		if r.Method == http.MethodPost {
+			if strings.HasSuffix(r.URL.Path, "/reset") {
+				if resetted, err := architecture.ResetRules(repoRoot); err == nil {
+					rules = resetted
+				} else {
+					writeError(w, http.StatusInternalServerError, "failed to reset rules: "+err.Error())
+					return
+				}
+			} else {
+				var rule model.ArchRule
+				if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
+					writeError(w, http.StatusBadRequest, "invalid rule payload: "+err.Error())
+					return
+				}
+				if strings.TrimSpace(rule.Name) == "" {
+					writeError(w, http.StatusBadRequest, "rule name is required")
+					return
+				}
+				if updated, err := architecture.AddRule(repoRoot, rule); err == nil {
+					rules = updated
+				} else {
+					writeError(w, http.StatusInternalServerError, "failed to save rule: "+err.Error())
+					return
+				}
+			}
+		} else if r.Method == http.MethodDelete {
+			parts := strings.Split(r.URL.Path, "/architecture/rules/")
+			if len(parts) > 1 && parts[1] != "" {
+				ruleID := strings.Trim(parts[1], "/")
+				if updated, err := architecture.DeleteRule(repoRoot, ruleID); err == nil {
+					rules = updated
+				} else {
+					writeError(w, http.StatusInternalServerError, "failed to delete rule: "+err.Error())
+					return
+				}
+			}
+		}
+	}
+
 	syms, _ := s.store.LoadSymbols(scanID)
 	rels, _ := s.store.LoadRelationships(scanID)
 	issues, _ := s.store.LoadIssues(scanID)
