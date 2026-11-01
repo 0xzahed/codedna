@@ -117,6 +117,15 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - Standalone quality gate CLI command `codedna check [--min-health=80] [--max-cycles=0] [--max-violations=0] [--json]`.
   - Non-zero exit code on threshold failure with clear terminal diagnostics for failing builds.
   - Added `make check` target in unified Makefile for automated CI/CD pipeline gating.
+- [x] **Task 5.4 — System Design & Multi-Tier Architecture Topology Engine:**
+  - Automated tier classification into 6 structural tiers (`TierClient`, `TierAPI`, `TierService`, `TierStorage`, `TierMessaging`, `TierIntegration`).
+  - Cross-tier data flow hop reconstruction from AST call graph edges with protocol detection (`HTTPS / REST API`, `In-Memory Orchestration`, `SQL / Storage Interface`, `Async Event / Channel Pipeline`).
+  - Gang of Four & modern distributed pattern detection: Clean Architecture/Ports & Adapters, Repository/Data Mapper, Factory/Builder, Singleton, Event-Driven/Pub-Sub, Chain of Responsibility/Middleware, CQRS.
+  - Architectural bottleneck hotspot detection and reliability score calculation.
+  - Dedicated CLI command: `codedna design [--repo <path>] [--json]` with ASCII tiered topology.
+  - REST endpoints: `GET /api/scans/:id/system-design` and `GET /api/scans/:id/patterns`.
+  - Dedicated 10th Core Intelligence View: `SystemDesignView.tsx` (`/design`) with interactive tier inspection, hop flow pipeline, and filterable pattern recognition gallery.
+  - Overview dashboard summary card with direct navigation link.
 - [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
   - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
 
