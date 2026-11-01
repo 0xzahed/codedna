@@ -4,16 +4,16 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.0.x   | :white_check_mark: |
+| 2.x.x   | :white_check_mark: |
 | < 2.0   | :x:                |
 
 ## Reporting a Vulnerability
 
-The CodeDNA team takes the security of our platform and user source code seriously.
+The CodeDNA maintainers take the security of our platform and user source code seriously.
 
-If you discover a security vulnerability, please **do not** create a public GitHub issue. Instead, report it privately via email to:
+If you discover a security vulnerability, please **do not** create a public GitHub issue. Instead, report it privately via GitHub Private Vulnerability Reporting or email:
 
-`security@codedna.dev` (or through GitHub Private Vulnerability Reporting).
+`zahed04x@gmail.com`
 
 Please provide:
 - A description of the issue and potential impact
