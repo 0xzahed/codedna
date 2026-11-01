@@ -35,6 +35,9 @@ export default function ExplorerView() {
         setSymbols(symList || []);
         if (fileList?.length > 0) {
           setSelectedFile(fileList[0]);
+        } else {
+          setSelectedFile(null);
+          setFileContent('');
         }
       })
       .catch((err) => console.error(err))

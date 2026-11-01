@@ -91,6 +91,8 @@ type ScanResult struct {
 // Remote repositories are cloned into ~/.codedna/repos/<slug> with depth 1.
 func ResolveTarget(target string) (string, error) {
 	target = strings.TrimSpace(target)
+	target = strings.Trim(target, "\"'`")
+	target = strings.TrimSpace(target)
 	if target == "" {
 		target = "."
 	}

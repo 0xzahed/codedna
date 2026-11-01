@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -361,6 +362,28 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 		nodeMap[sym.ID] = true
 	}
 
+	// Smart node limiting for UI rendering performance (prevents browser canvas freeze on 5k+ nodes)
+	limitStr := r.URL.Query().Get("limit")
+	limit := 300
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	} else if filterType != "" || searchQuery != "" {
+		limit = 800
+	}
+
+	if len(nodes) > limit {
+		sort.Slice(nodes, func(i, j int) bool {
+			return nodes[i].Complexity > nodes[j].Complexity
+		})
+		nodes = nodes[:limit]
+		nodeMap = make(map[string]bool)
+		for _, n := range nodes {
+			nodeMap[n.ID] = true
+		}
+	}
+
 	// Graph edges
 	for i, rel := range rels {
 		source := rel.FromID
@@ -369,11 +392,9 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 			continue
 		}
 
-		// Only include edges whose endpoints are in node selection when filtered
-		if filterType != "" || searchQuery != "" {
-			if !nodeMap[source] && !nodeMap[target] {
-				continue
-			}
+		// Ensure both source and target nodes exist in the rendered graph
+		if !nodeMap[source] || !nodeMap[target] {
+			continue
 		}
 
 		edges = append(edges, model.GraphEdge{
