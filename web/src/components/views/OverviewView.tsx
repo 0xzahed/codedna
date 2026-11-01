@@ -7,6 +7,8 @@ import {
   fetchIssues, 
   fetchArchitecture, 
   fetchKnowledge,
+  fetchSystemDesign,
+  SystemDesignReport,
   IssueItem, 
   ArchReport, 
   RepoStats,
@@ -26,7 +28,8 @@ import {
   Cpu,
   Users,
   GitCommit,
-  ShieldAlert
+  ShieldAlert,
+  Workflow
 } from 'lucide-react';
 
 export default function OverviewView() {
@@ -35,6 +38,7 @@ export default function OverviewView() {
   const [issues, setIssues] = useState<IssueItem[]>([]);
   const [arch, setArch] = useState<ArchReport | null>(null);
   const [knowledge, setKnowledge] = useState<RepoKnowledgeMap | null>(null);
+  const [sysDesign, setSysDesign] = useState<SystemDesignReport | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,11 +48,13 @@ export default function OverviewView() {
       fetchIssues(scanId),
       fetchArchitecture(scanId),
       fetchKnowledge(scanId).catch(() => null),
+      fetchSystemDesign(scanId).catch(() => null),
     ])
-      .then(([depData, issueData, archData, knowData]) => {
+      .then(([depData, issueData, archData, knowData, designData]) => {
         setIssues(issueData || []);
         setArch(archData || null);
         setKnowledge(knowData || null);
+        setSysDesign(designData || null);
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -259,6 +265,70 @@ export default function OverviewView() {
           </div>
         )}
       </div>
+
+      {/* System Design & Architecture Topology Summary */}
+      {sysDesign && (
+        <div className="bg-charcoal-850 border border-charcoal-750 rounded-xl p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-charcoal-750 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg text-indigo-400">
+                <Workflow className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">System Design &amp; Architecture Flow</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Multi-tier architectural taxonomy, protocol hops, and recognized design patterns.
+                </p>
+              </div>
+            </div>
+
+            <a
+              href="/design"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab('design');
+                window.history.pushState({}, '', '/design');
+              }}
+              className="flex items-center gap-2 text-xs font-medium text-dna-blue hover:text-white px-3 py-1.5 rounded-lg bg-dna-blue/10 hover:bg-dna-blue/20 border border-dna-blue/30 transition-all font-mono"
+            >
+              <span>Explore Topology Canvas</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono">
+            <div className="bg-charcoal-900 border border-charcoal-750 p-4 rounded-xl">
+              <div className="text-xs text-zinc-400">Style</div>
+              <div className="text-sm font-bold text-white mt-1 line-clamp-1">{sysDesign.architectureStyle}</div>
+              <div className="text-[11px] text-zinc-500 mt-1 font-sans">Inferred from tier topology</div>
+            </div>
+
+            <div className="bg-charcoal-900 border border-charcoal-750 p-4 rounded-xl">
+              <div className="text-xs text-zinc-400">Reliability Score</div>
+              <div className="text-3xl font-bold text-emerald-400 mt-1">
+                {sysDesign.reliabilityScore.toFixed(1)} <span className="text-xs text-zinc-500 font-normal">/ 100</span>
+              </div>
+              <div className="text-[11px] text-zinc-500 mt-1 font-sans">Layer boundary discipline</div>
+            </div>
+
+            <div className="bg-charcoal-900 border border-charcoal-750 p-4 rounded-xl">
+              <div className="text-xs text-zinc-400">Data Flow Hops</div>
+              <div className="text-3xl font-bold text-indigo-400 mt-1">
+                {sysDesign.dataFlow.length}
+              </div>
+              <div className="text-[11px] text-zinc-500 mt-1 font-sans">Inter-tier protocol calls</div>
+            </div>
+
+            <div className="bg-charcoal-900 border border-charcoal-750 p-4 rounded-xl">
+              <div className="text-xs text-zinc-400">Recognized Patterns</div>
+              <div className="text-3xl font-bold text-dna-blue mt-1">
+                {sysDesign.detectedPatterns.length}
+              </div>
+              <div className="text-[11px] text-zinc-500 mt-1 font-sans">GoF &amp; architectural patterns</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Team Knowledge Distribution & Bus Factor Risk */}
       {knowledge && knowledge.isGitRepo && (
