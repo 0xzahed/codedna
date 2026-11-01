@@ -1,0 +1,33 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# CodeDNA database & local cache
+.codedna/
+*.db
+*.db-wal
+*.db-shm
+
+# Node & Next.js
+web/node_modules/
+web/.next/
+web/out/
+.next/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage & artifacts
+coverage/
+*.out
+*.test
+
+# OS & IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp

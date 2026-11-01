@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  codedna:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codedna-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/workspace:ro
+      - codedna-data:/root/.codedna
+    environment:
+      - CODEDNA_HOME=/root/.codedna
+    command: ["serve", "--port", "8080", "--repo", "/workspace"]
+    restart: unless-stopped
+
+volumes:
+  codedna-data:

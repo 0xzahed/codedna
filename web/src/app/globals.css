@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import 'reactflow/dist/style.css';
+
+:root {
+  --background: #090a0b;
+  --foreground: #f4f4f5;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f1012;
+}
+::-webkit-scrollbar-thumb {
+  background: #27292e;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f424b;
+}
+
+/* React Flow dark overrides */
+.react-flow__background {
+  background-color: #0c0d0e !important;
+}
+.react-flow__controls {
+  background-color: #141518 !important;
+  border: 1px solid #27292e !important;
+  border-radius: 6px !important;
+}
+.react-flow__controls button {
+  background-color: #141518 !important;
+  border-bottom: 1px solid #27292e !important;
+  color: #a1a1aa !important;
+}
+.react-flow__controls button:hover {
+  background-color: #23252a !important;
+  color: #fff !important;
+}
+.react-flow__minimap {
+  background-color: #141518 !important;
+  border: 1px solid #27292e !important;
+  border-radius: 6px !important;
+}
