@@ -410,3 +410,70 @@ export async function fetchWorkspaceGraph(id: number): Promise<GraphData> {
   const res = await fetch(`${API_BASE}/api/workspaces/${id}/graph`);
   return res.json();
 }
+
+export type TierKind =
+  | 'client_gateway'
+  | 'api_presentation'
+  | 'domain_service'
+  | 'persistence_storage'
+  | 'async_messaging'
+  | 'external_integration';
+
+export interface SystemTier {
+  id: TierKind;
+  name: string;
+  description: string;
+  order: number;
+  fileCount: number;
+  symbolCount: number;
+  files?: string[];
+  keySymbols?: string[];
+}
+
+export interface DataFlowHop {
+  fromTier: TierKind;
+  toTier: TierKind;
+  protocol: string;
+  callCount: number;
+  sampleCalls?: string[];
+}
+
+export type PatternCategory = 'Architectural' | 'Structural' | 'Creational' | 'Behavioral';
+
+export interface DetectedPattern {
+  id: string;
+  name: string;
+  category: PatternCategory;
+  confidence: number;
+  description: string;
+  evidence: string[];
+  files: string[];
+  tradeoffs: string;
+}
+
+export interface SystemDesignReport {
+  architectureStyle: string;
+  summary: string;
+  tiers: SystemTier[];
+  dataFlow: DataFlowHop[];
+  detectedPatterns: DetectedPattern[];
+  keyEntrypoints: string[];
+  bottleneckHotspots: string[];
+  reliabilityScore: number;
+}
+
+export async function fetchSystemDesign(scanId: number = 1): Promise<SystemDesignReport> {
+  const res = await fetch(`${API_BASE}/api/scans/${scanId}/system-design`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch system design report: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function fetchPatterns(scanId: number = 1): Promise<{ scanId: number; patterns: DetectedPattern[]; total: number }> {
+  const res = await fetch(`${API_BASE}/api/scans/${scanId}/patterns`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch patterns: ${res.statusText}`);
+  }
+  return res.json();
+}
