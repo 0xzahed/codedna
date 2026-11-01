@@ -155,11 +155,14 @@ Parsing: [██═════════════════════�
 ### CLI Command Overview
 
 | Command | Description | Needs Server? | Output Formats |
-| :--- | :--- | :---: | :---: |
+| :--- | :--- | :--- | :---: |
 | `codedna scan <path>` | Ingest directory and index AST symbols into SQLite | ❌ No | Console / JSON |
 | `codedna analyze <path>` | Deep scan with Tarjan SCC cycles & layer drift verification | ❌ No | Console / JSON |
 | `codedna graph <path>` | Print connected symbol graph and dependency edges | ❌ No | Text / JSON |
 | `codedna impact [path]` | Calculate Git diff blast radius against target branch | ❌ No | Table / JSON |
+| `codedna design [--repo <path>]` | Reconstruct multi-tier system design, protocol flows & design patterns | ❌ No | Console / JSON |
+| `codedna check` | Automated CI/CD architecture quality gate & rule enforcement | ❌ No | Console / JSON |
+| `codedna blame, knowledge` | Analyzes git line ownership, team knowledge map & bus factor risk | ❌ No | Console / JSON |
 | `codedna report [path]` | Generate comprehensive markdown or JSON intelligence report | ❌ No | Markdown / JSON |
 | `codedna serve` | Launch REST API daemon and interactive React Flow Web UI | ❌ No | HTTP (`:8080`) |
 | `codedna watch <path>` | Monitor directory for live file modifications and hot-reindex | ❌ No | Live Stream / SSE |
@@ -241,12 +244,31 @@ curl -s http://localhost:8080/api/scans/latest/export?format=c4 > c4_components.
 
 ## 🖥️ Web Dashboard Intelligence Suite
 
-When running `codedna serve`, access the interactive UI at **`http://localhost:8080`**. CodeDNA provides 9 specialized intelligence views:
+When running `codedna serve`, access the interactive UI at **`http://localhost:8080`**. CodeDNA provides 10 specialized intelligence views:
 
 ### 1. 🌐 System Overview & Health Dashboard (`/`)
 * **Aggregate Health Score (0–100):** Real-time algorithmically weighted health rating calculated from circular cycles, cyclomatic hotspots, dead code volume, and architectural layer violations.
 * **Telemetry Metrics:** Instant inventory of total source files, parsed AST symbols, functions, classes/structs, and resolved dependency edges.
+* **System Design & Topology Card:** Snapshot of inferred architecture style, reliability score, active tier count, and detected pattern totals with 1-click drilldown.
+* **Team Knowledge & Bus Factor Card:** Line additions leaderboard, primary maintainer distribution, and single-contributor high-risk module alerts.
 * **Top Hotspot Indicators:** Surface complex, high-churn functions that pose architectural maintenance risk.
+
+### 2. 🏛️ System Design & Architecture Topology Flow (`/design/`)
+* **Multi-Tier Architectural Classification:** Automatically organizes codebase components into 6 industry-standard tiers:
+  * 🌐 **Tier 1 — Client & Gateway:** Frontend pages, reverse proxies, and edge routing entrypoints.
+  * 🖥️ **Tier 2 — API & Presentation:** HTTP controllers, REST endpoints, GraphQL resolvers, and RPC interfaces.
+  * ⚙️ **Tier 3 — Application & Domain Services:** Core business domain logic, orchestrators, use cases, and policy rules.
+  * 🗄️ **Tier 4 — Persistence & Data Storage:** Repositories, database entities, ORM models, SQL queries, and cache layers.
+  * 📻 **Tier 5 — Asynchronous Workers & Queues:** Background workers, event emitters, consumer loops, and webhooks.
+  * 🔗 **Tier 6 — External Integrations:** Third-party payment gateways, external cloud storage, and mailers.
+* **Cross-Tier Protocol Data Flow Pipeline:** Reconstructs inter-tier communication hops from AST call edges with protocol tagging (`HTTPS / REST API`, `In-Memory Orchestration`, `SQL / Storage Interface`, `Async Event / Channel Pipeline`) and call counts.
+* **Software Design Pattern Recognition Gallery:** Automatically detects classic Gang of Four and modern distributed patterns with confidence scores, code evidence, and engineering trade-offs:
+  * **Architectural:** Clean Architecture / Ports & Adapters (Hexagonal), CQRS.
+  * **Structural:** Repository / Data Mapper Pattern.
+  * **Creational:** Factory / Constructor Pattern, Singleton / Shared Registry.
+  * **Behavioral:** Event-Driven / Pub-Sub Pattern, Chain of Responsibility / Middleware Pipeline.
+* **Interactive Tier Inspector:** Click any tier to drill down into its constituent files and key exported symbols.
+* **Architectural Bottleneck & Hotspot Diagnostics:** Detects layer-bypassing violations (e.g. Client directly querying Storage) and high-traffic inter-tier hops.
 
 ### 2. 🧬 Interactive Living DNA Graph (`/graph/`)
 * **React Flow Topology Engine:** Hardware-accelerated canvas with smooth zooming, panning, auto-centering, minimap navigation, and fuzzy symbol search.
