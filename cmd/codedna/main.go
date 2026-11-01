@@ -17,6 +17,7 @@ import (
 
 	"github.com/codedna/codedna/internal/ai"
 	"github.com/codedna/codedna/internal/api"
+	"github.com/codedna/codedna/internal/blame"
 	"github.com/codedna/codedna/internal/engine"
 	"github.com/codedna/codedna/internal/impact"
 	"github.com/codedna/codedna/internal/model"
@@ -55,6 +56,8 @@ func main() {
 		runWatch(args)
 	case "runtime":
 		runRuntime(args)
+	case "blame", "knowledge":
+		runBlame(args)
 	case "version", "--version", "-v":
 		fmt.Printf("CodeDNA version %s\n", version)
 	case "help", "--help", "-h":
@@ -84,6 +87,7 @@ func printUsage() {
 	fmt.Println("  report [path]         Generates comprehensive Markdown or JSON reports")
 	fmt.Println("  serve                 Starts REST API server and interactive web dashboard")
 	fmt.Println("  watch <path>          Watches directory for changes and live-updates index")
+	fmt.Println("  blame, knowledge      Analyzes git line ownership, team knowledge map & bus factor")
 	fmt.Println("  runtime enable        Configures opt-in runtime instrumentation adapters")
 	fmt.Println("  version               Prints version information")
 	fmt.Println("\nRun 'codedna <command> --help' for details on a specific command.")
@@ -531,4 +535,66 @@ func runRuntime(args []string) {
 	fmt.Println("2. Run 'codedna serve' in another terminal to listen on http://localhost:8080.")
 	fmt.Println("3. Execute your tests or application to record real-time function paths and durations.")
 	fmt.Println("4. Open the Web Dashboard > Runtime Timeline to compare static versus runtime behavior.")
+}
+
+func runBlame(args []string) {
+	fs := flag.NewFlagSet("blame", flag.ExitOnError)
+	target := fs.String("repo", ".", "Repository root path to analyze")
+	jsonOut := fs.Bool("json", false, "Output as JSON")
+	fs.Parse(args)
+
+	resolvedRepo, err := scanner.ResolveTarget(*target)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Target error: %v\n", err)
+		os.Exit(1)
+	}
+
+	km, err := blame.AnalyzeKnowledge(resolvedRepo)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Knowledge analysis error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if *jsonOut {
+		b, _ := json.MarshalIndent(km, "", "  ")
+		fmt.Println(string(b))
+		return
+	}
+
+	fmt.Println("==================================================")
+	fmt.Printf("  CodeDNA Team Knowledge & Bus Factor Analysis\n")
+	fmt.Printf("  Repository: %s\n", resolvedRepo)
+	fmt.Println("==================================================")
+	if !km.IsGitRepo {
+		fmt.Println("⚠️  Target directory is not a Git repository.")
+		return
+	}
+
+	fmt.Printf("Total Contributors:  %d\n", km.TotalAuthors)
+	fmt.Printf("Total Commits:       %d\n", km.TotalCommits)
+	fmt.Printf("Bus Factor Score:    %.1f / 100\n", km.BusFactorScore)
+	fmt.Printf("High-Risk Files:     %d (Single maintainer >90%%)\n\n", km.HighRiskFiles)
+
+	fmt.Println("Top Contributors (by Lines of Code Added):")
+	for i, a := range km.TopContributors {
+		if i >= 10 {
+			break
+		}
+		fmt.Printf("  %2d. %-24s %5d commits | %7d lines added | %3d primary files (%.1f%% share)\n",
+			i+1, a.Name, a.Commits, a.LinesAdded, a.PrimaryFileCount, a.KnowledgeShare)
+	}
+
+	if km.HighRiskFiles > 0 {
+		fmt.Printf("\nSample High Bus-Factor Risk Files (Bus Factor = 1):\n")
+		count := 0
+		for _, f := range km.Files {
+			if f.BusFactorRisk == model.SevHigh {
+				fmt.Printf("  • %-45s (Owner: %s, 100%% of additions)\n", f.FilePath, f.PrimaryAuthor)
+				count++
+				if count >= 8 {
+					break
+				}
+			}
+		}
+	}
 }

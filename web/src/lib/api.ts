@@ -147,6 +147,40 @@ export interface RefactorReport {
   totalProposals: number;
 }
 
+export interface AuthorStats {
+  name: string;
+  email: string;
+  commits: number;
+  linesAdded: number;
+  linesDeleted: number;
+  filesTouched: number;
+  primaryFileCount: number;
+  knowledgeShare: number;
+}
+
+export interface FileOwnership {
+  filePath: string;
+  primaryAuthor: string;
+  contributorsCount: number;
+  topContributors: Array<{
+    name: string;
+    email: string;
+    linesAdded: number;
+    percentage: number;
+  }>;
+  busFactorRisk: 'info' | 'low' | 'medium' | 'high';
+}
+
+export interface RepoKnowledgeMap {
+  isGitRepo: boolean;
+  totalAuthors: number;
+  totalCommits: number;
+  highRiskFiles: number;
+  busFactorScore: number;
+  topContributors: AuthorStats[];
+  files: FileOwnership[];
+}
+
 export interface RuntimeSummary {
   totalEvents: number;
   uniqueFunctions: number;
@@ -286,6 +320,14 @@ export async function fetchRefactorProposals(scanId: number = 1): Promise<Refact
   const res = await fetch(`${API_BASE}/api/scans/${scanId}/refactor`);
   if (!res.ok) {
     throw new Error('Failed to fetch architectural refactoring proposals');
+  }
+  return res.json();
+}
+
+export async function fetchKnowledge(scanId: number = 1): Promise<RepoKnowledgeMap> {
+  const res = await fetch(`${API_BASE}/api/scans/${scanId}/knowledge`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch team knowledge map');
   }
   return res.json();
 }

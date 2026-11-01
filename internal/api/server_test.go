@@ -314,3 +314,29 @@ func TestScanRefactorEndpoint(t *testing.T) {
 		t.Errorf("Expected scanId in response")
 	}
 }
+
+func TestScanKnowledgeEndpoint(t *testing.T) {
+	srv, _, st := setupTestServer(t)
+	defer st.Close()
+
+	// Initial scan
+	scanReq := httptest.NewRequest("POST", "/api/repos/scan", bytes.NewReader([]byte("{}")))
+	wInit := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wInit, scanReq)
+	if wInit.Code != http.StatusOK {
+		t.Fatalf("Scan failed: %d %s", wInit.Code, wInit.Body.String())
+	}
+
+	// Query knowledge map
+	knowReq := httptest.NewRequest("GET", "/api/scans/1/knowledge", nil)
+	wKnow := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wKnow, knowReq)
+	if wKnow.Code != http.StatusOK {
+		t.Fatalf("GET /knowledge failed: %d %s", wKnow.Code, wKnow.Body.String())
+	}
+
+	var km model.RepoKnowledgeMap
+	if err := json.NewDecoder(wKnow.Body).Decode(&km); err != nil {
+		t.Fatalf("Failed to decode knowledge response: %v", err)
+	}
+}

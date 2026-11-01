@@ -22,6 +22,7 @@ import (
 	"github.com/codedna/codedna/internal/ai"
 	"github.com/codedna/codedna/internal/analysis"
 	"github.com/codedna/codedna/internal/architecture"
+	"github.com/codedna/codedna/internal/blame"
 	"github.com/codedna/codedna/internal/engine"
 	"github.com/codedna/codedna/internal/impact"
 	"github.com/codedna/codedna/internal/model"
@@ -288,6 +289,8 @@ func (s *Server) handleScanSubroutes(w http.ResponseWriter, r *http.Request) {
 		s.handleScanExport(w, r, scanID)
 	case "refactor":
 		s.handleScanRefactor(w, r, scanID)
+	case "knowledge", "blame":
+		s.handleScanKnowledge(w, r, scanID)
 	default:
 		http.NotFound(w, r)
 	}
@@ -943,6 +946,21 @@ func (s *Server) handleScanRefactor(w http.ResponseWriter, r *http.Request, scan
 		"proposals":        proposals,
 		"totalProposals":   len(proposals),
 	})
+}
+
+func (s *Server) handleScanKnowledge(w http.ResponseWriter, r *http.Request, scanID int64) {
+	repoRoot := s.repoRoot
+	if scanRoot, err := s.store.LoadRepoRootForScan(scanID); err == nil && scanRoot != "" {
+		repoRoot = scanRoot
+	}
+
+	km, err := blame.AnalyzeKnowledge(repoRoot)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to analyze knowledge map: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, km)
 }
 
 func (s *Server) handleRuntimeEvents(w http.ResponseWriter, r *http.Request) {

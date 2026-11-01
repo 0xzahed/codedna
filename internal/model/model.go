@@ -437,3 +437,40 @@ type RefactoringProposal struct {
 	Explanation     string   `json:"explanation"`
 }
 
+// Git Knowledge & Bus Factor models
+type AuthorStats struct {
+	Name             string  `json:"name"`
+	Email            string  `json:"email"`
+	Commits          int     `json:"commits"`
+	LinesAdded       int     `json:"linesAdded"`
+	LinesDeleted     int     `json:"linesDeleted"`
+	FilesTouched     int     `json:"filesTouched"`
+	PrimaryFileCount int     `json:"primaryFileCount"`
+	KnowledgeShare   float64 `json:"knowledgeShare"` // 0 - 100%
+}
+
+type ContributorShare struct {
+	Name       string  `json:"name"`
+	Email      string  `json:"email"`
+	LinesAdded int     `json:"linesAdded"`
+	Percentage float64 `json:"percentage"`
+}
+
+type FileOwnership struct {
+	FilePath          string             `json:"filePath"`
+	PrimaryAuthor     string             `json:"primaryAuthor"`
+	ContributorsCount int                `json:"contributorsCount"`
+	TopContributors   []ContributorShare `json:"topContributors"`
+	BusFactorRisk     Severity           `json:"busFactorRisk"` // high, medium, low
+}
+
+type RepoKnowledgeMap struct {
+	IsGitRepo       bool            `json:"isGitRepo"`
+	TotalAuthors    int             `json:"totalAuthors"`
+	TotalCommits    int             `json:"totalCommits"`
+	HighRiskFiles   int             `json:"highRiskFiles"` // Bus factor = 1
+	BusFactorScore  float64         `json:"busFactorScore"` // 0 - 100
+	TopContributors []AuthorStats   `json:"topContributors"`
+	Files           []FileOwnership `json:"files"`
+}
+

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Team Knowledge & Bus Factor Analysis Engine**: High-performance git history & numstat parser (`internal/blame/blame.go`) mapping line ownership per author and identifying single-contributor high-risk modules.
+- **CLI Blame Command**: Added `codedna blame [--repo <path>] [--json]` to inspect team knowledge distribution, author contributions, and bus factor health directly from the terminal.
+- **Knowledge Map REST Endpoint**: `GET /api/scans/:id/knowledge` (and `/api/scans/:id/blame`) providing contributor breakdown, line additions, and file primary ownership.
+- **Overview Dashboard Knowledge Card**: Added Team Knowledge & Bus Factor section in `OverviewView.tsx` with contributor leaderboard, ownership percentage progress bars, and high-risk file alerts.
+
 ## [2.3.0] - 2026-11-02
 
 ### Added

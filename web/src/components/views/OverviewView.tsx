@@ -6,9 +6,11 @@ import {
   fetchRepos, 
   fetchIssues, 
   fetchArchitecture, 
+  fetchKnowledge,
   IssueItem, 
   ArchReport, 
   RepoStats,
+  RepoKnowledgeMap,
   fetchDependencies 
 } from '../../lib/api';
 import { 
@@ -21,7 +23,10 @@ import {
   Layers, 
   ArrowRight,
   TrendingUp,
-  Cpu
+  Cpu,
+  Users,
+  GitCommit,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function OverviewView() {
@@ -29,6 +34,7 @@ export default function OverviewView() {
   const [stats, setStats] = useState<RepoStats | null>(null);
   const [issues, setIssues] = useState<IssueItem[]>([]);
   const [arch, setArch] = useState<ArchReport | null>(null);
+  const [knowledge, setKnowledge] = useState<RepoKnowledgeMap | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,10 +43,12 @@ export default function OverviewView() {
       fetchDependencies(scanId),
       fetchIssues(scanId),
       fetchArchitecture(scanId),
+      fetchKnowledge(scanId).catch(() => null),
     ])
-      .then(([depData, issueData, archData]) => {
+      .then(([depData, issueData, archData, knowData]) => {
         setIssues(issueData || []);
         setArch(archData || null);
+        setKnowledge(knowData || null);
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -251,6 +259,100 @@ export default function OverviewView() {
           </div>
         )}
       </div>
+
+      {/* Team Knowledge Distribution & Bus Factor Risk */}
+      {knowledge && knowledge.isGitRepo && (
+        <div className="bg-charcoal-850 border border-charcoal-750 rounded-xl p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-charcoal-750 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-dna-blue">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Team Knowledge &amp; Bus Factor Risk</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Line ownership distribution across contributors and single-maintainer risk analysis.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 font-mono text-xs">
+              <span className="px-2.5 py-1 rounded bg-charcoal-800 border border-charcoal-700 text-zinc-300">
+                {knowledge.totalAuthors} Contributor(s)
+              </span>
+              <span className="px-2.5 py-1 rounded bg-charcoal-800 border border-charcoal-700 text-zinc-300">
+                {knowledge.totalCommits} Commits
+              </span>
+            </div>
+          </div>
+
+          {/* Metric Badges */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono">
+            <div className="bg-charcoal-900 border border-charcoal-750 p-4 rounded-xl">
+              <div className="text-xs text-zinc-400">Bus Factor Score</div>
+              <div className="text-3xl font-bold text-white mt-1">
+                {knowledge.busFactorScore.toFixed(1)} <span className="text-xs text-zinc-500 font-normal">/ 100</span>
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1 font-sans">
+                {knowledge.busFactorScore >= 70 ? 'Healthy knowledge distribution' : 'Knowledge concentrated in key maintainers'}
+              </div>
+            </div>
+
+            <div className="bg-charcoal-900 border border-charcoal-750 p-4 rounded-xl">
+              <div className="text-xs text-zinc-400">Total Codebase Maintainers</div>
+              <div className="text-3xl font-bold text-dna-blue mt-1">
+                {knowledge.totalAuthors}
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1 font-sans">
+                Active authors in repository git log
+              </div>
+            </div>
+
+            <div className="bg-charcoal-900 border border-charcoal-750 p-4 rounded-xl">
+              <div className="text-xs text-zinc-400">Single-Maintainer Files</div>
+              <div className={`text-3xl font-bold mt-1 ${knowledge.highRiskFiles > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {knowledge.highRiskFiles}
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1 font-sans">
+                Files where 1 author owns &gt;90% of additions
+              </div>
+            </div>
+          </div>
+
+          {/* Contributor Ownership Leaderboard */}
+          <div className="space-y-3">
+            <div className="text-xs font-semibold text-white font-mono flex items-center gap-2">
+              <GitCommit className="w-4 h-4 text-dna-cyan" />
+              <span>Contributor Code Ownership</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {knowledge.topContributors.map((c, i) => (
+                <div key={i} className="bg-charcoal-900 border border-charcoal-750 p-4 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="font-bold text-white truncate max-w-[200px]">{c.name}</div>
+                    <span className="font-mono text-dna-blue font-bold">{c.knowledgeShare.toFixed(1)}%</span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full bg-charcoal-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-dna-blue h-1.5 rounded-full"
+                      style={{ width: `${Math.min(100, c.knowledgeShare)}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono">
+                    <span>{c.commits} commits</span>
+                    <span>{c.linesAdded.toLocaleString()} lines added</span>
+                    <span>{c.primaryFileCount} primary files</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
