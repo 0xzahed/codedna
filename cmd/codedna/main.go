@@ -22,6 +22,7 @@ import (
 	"github.com/codedna/codedna/internal/model"
 	"github.com/codedna/codedna/internal/report"
 	"github.com/codedna/codedna/internal/runtime"
+	"github.com/codedna/codedna/internal/scanner"
 	"github.com/codedna/codedna/internal/store"
 	"github.com/codedna/codedna/internal/watcher"
 )
@@ -388,9 +389,15 @@ func runServe(args []string) {
 	}
 	defer st.Close()
 
+	resolvedRepo, err := scanner.ResolveTarget(*repo)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Target resolution error: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Initial scan of target repository
-	fmt.Printf("[CodeDNA] Initializing intelligence store for %s ...\n", *repo)
-	res, err := engine.Run(*repo, st, nil)
+	fmt.Printf("[CodeDNA] Initializing intelligence store for %s ...\n", resolvedRepo)
+	res, err := engine.Run(resolvedRepo, st, nil)
 	if err != nil {
 		fmt.Printf("Warning: initial scan had notices: %v\n", err)
 	} else {
@@ -409,7 +416,7 @@ func runServe(args []string) {
 	server := api.NewServer(api.Config{
 		Store:    st,
 		AIConfig: ai.DefaultConfig(),
-		RepoRoot: *repo,
+		RepoRoot: resolvedRepo,
 		WebFS:    webFS,
 	})
 

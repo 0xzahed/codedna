@@ -121,3 +121,30 @@ func TestGitDetection(t *testing.T) {
 		t.Errorf("Expected branch main, got %s", meta.Branch)
 	}
 }
+
+func TestResolveTarget(t *testing.T) {
+	// 1. Current dir
+	p, err := ResolveTarget(".")
+	if err != nil {
+		t.Fatalf("ResolveTarget(.) failed: %v", err)
+	}
+	if p == "" {
+		t.Error("Expected non-empty resolved path")
+	}
+
+	// 2. Non-existent path returns error
+	_, err = ResolveTarget("/non/existent/path/for/sure/codedna")
+	if err == nil {
+		t.Error("Expected error for non-existent path")
+	}
+
+	// 3. Temp dir
+	tmp := t.TempDir()
+	p, err = ResolveTarget(tmp)
+	if err != nil {
+		t.Fatalf("ResolveTarget(tmp) failed: %v", err)
+	}
+	if p != tmp {
+		t.Errorf("Expected %s, got %s", tmp, p)
+	}
+}

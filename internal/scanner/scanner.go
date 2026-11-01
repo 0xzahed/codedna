@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -85,18 +86,96 @@ type ScanResult struct {
 	CfgFiles  map[string]string  `json:"-"` // manifest file paths per ecosystem
 }
 
-// Scan walks root and produces a ScanResult. It does not parse code.
-func (s *Scanner) Scan(root string, progress ScanProgress) (*ScanResult, error) {
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return nil, fmt.Errorf("resolve path: %w", err)
+// ResolveTarget resolves a local folder path (supporting ~/) or a remote GitHub/Git repository URL.
+// Remote repositories are cloned into ~/.codedna/repos/<slug> with depth 1.
+func ResolveTarget(target string) (string, error) {
+	target = strings.TrimSpace(target)
+	if target == "" {
+		target = "."
 	}
+
+	isRemote := strings.HasPrefix(target, "https://") ||
+		strings.HasPrefix(target, "http://") ||
+		strings.HasPrefix(target, "git@") ||
+		strings.HasPrefix(target, "github.com/") ||
+		strings.HasPrefix(target, "gitlab.com/")
+
+	if isRemote {
+		cloneURL := target
+		if strings.HasPrefix(target, "github.com/") || strings.HasPrefix(target, "gitlab.com/") {
+			cloneURL = "https://" + target
+		}
+
+		// Clean slug for directory name, e.g. "https://github.com/gin-gonic/gin.git" -> "gin-gonic_gin"
+		u := cloneURL
+		u = strings.TrimSuffix(u, ".git")
+		u = strings.TrimPrefix(u, "https://")
+		u = strings.TrimPrefix(u, "http://")
+		u = strings.TrimPrefix(u, "git@")
+		u = strings.ReplaceAll(u, ":", "/")
+		parts := strings.Split(u, "/")
+		slug := "repo"
+		if len(parts) >= 2 {
+			slug = parts[len(parts)-2] + "_" + parts[len(parts)-1]
+		} else if len(parts) == 1 {
+			slug = parts[0]
+		}
+
+		home, err := os.UserHomeDir()
+		if err != nil {
+			home = os.TempDir()
+		}
+		destDir := filepath.Join(home, ".codedna", "repos", slug)
+
+		if fi, err := os.Stat(destDir); err == nil && fi.IsDir() {
+			// Already cloned, try fast pull or reuse existing
+			cmd := exec.Command("git", "-C", destDir, "pull", "--ff-only")
+			_ = cmd.Run()
+			return destDir, nil
+		}
+
+		if err := os.MkdirAll(filepath.Dir(destDir), 0o755); err != nil {
+			return "", fmt.Errorf("create repos directory: %w", err)
+		}
+
+		cmd := exec.Command("git", "clone", "--depth", "1", cloneURL, destDir)
+		var errBuf strings.Builder
+		cmd.Stderr = &errBuf
+		if err := cmd.Run(); err != nil {
+			return "", fmt.Errorf("git clone failed for %s: %s", cloneURL, errBuf.String())
+		}
+		return destDir, nil
+	}
+
+	// Expand ~/ if provided
+	if strings.HasPrefix(target, "~/") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			target = filepath.Join(home, target[2:])
+		}
+	}
+
+	absRoot, err := filepath.Abs(target)
+	if err != nil {
+		return "", fmt.Errorf("resolve path: %w", err)
+	}
+
 	info, err := os.Stat(absRoot)
 	if err != nil {
-		return nil, fmt.Errorf("repository path: %w", err)
+		return "", fmt.Errorf("target path does not exist: %w", err)
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("%s is not a directory", absRoot)
+		return "", fmt.Errorf("target path %s is not a directory", absRoot)
+	}
+
+	return absRoot, nil
+}
+
+// Scan walks root and produces a ScanResult. It does not parse code.
+func (s *Scanner) Scan(root string, progress ScanProgress) (*ScanResult, error) {
+	absRoot, err := ResolveTarget(root)
+	if err != nil {
+		return nil, err
 	}
 
 	res := &ScanResult{
