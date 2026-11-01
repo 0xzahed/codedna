@@ -73,25 +73,38 @@ export default function GraphView() {
 
     // Calculate layout positions
     const cols = Math.ceil(Math.sqrt(filteredNodes.length)) || 4;
+
+    // Build directory groups for hierarchical architectural layout
+    const groupMap: { [key: string]: number } = {};
+    const groupItemCounts: { [key: string]: number } = {};
+    filteredNodes.forEach((gn) => {
+      const dir = gn.file ? (gn.file.includes('/') ? gn.file.split('/')[0] : 'root') : 'root';
+      if (groupMap[dir] === undefined) {
+        groupMap[dir] = Object.keys(groupMap).length;
+      }
+    });
+
     const rfNodes: Node[] = filteredNodes.map((gn, idx) => {
       let x = 0;
       let y = 0;
 
       if (layoutMode === 'hierarchical') {
-        // Hierarchical clustering by file / type
-        const col = idx % 5;
-        const row = Math.floor(idx / 5);
-        x = col * 260 + 50;
-        y = row * 140 + 50;
+        const dir = gn.file ? (gn.file.includes('/') ? gn.file.split('/')[0] : 'root') : 'root';
+        const col = groupMap[dir] || 0;
+        const row = groupItemCounts[dir] || 0;
+        groupItemCounts[dir] = row + 1;
+        x = col * 280 + 50;
+        y = row * 130 + 50;
       } else {
         // Grid layout
         const col = idx % cols;
         const row = Math.floor(idx / cols);
-        x = col * 240 + 50;
+        x = col * 260 + 50;
         y = row * 130 + 50;
       }
 
       const isHighComplexity = (gn.complexity || 0) > 15;
+      const connCount = gn.data?.connections as number | undefined;
 
       return {
         id: gn.id,
@@ -109,24 +122,31 @@ export default function GraphView() {
                 }`}>
                   {gn.type}
                 </span>
-                {gn.data?.service && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 truncate max-w-[90px]">
-                    {String(gn.data.service)}
-                  </span>
-                )}
-                {isHighComplexity && (
-                  <span className="flex items-center text-[10px] font-mono text-dna-rose">
-                    <Flame className="w-3 h-3 mr-0.5" />
-                    {gn.complexity}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {connCount !== undefined && connCount > 0 && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-charcoal-800 text-zinc-300 border border-charcoal-700">
+                      {connCount} rel
+                    </span>
+                  )}
+                  {gn.data?.service && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 truncate max-w-[85px]">
+                      {String(gn.data.service)}
+                    </span>
+                  )}
+                  {isHighComplexity && (
+                    <span className="flex items-center text-[10px] font-mono text-dna-rose">
+                      <Flame className="w-3 h-3 mr-0.5" />
+                      {gn.complexity}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="text-xs font-mono font-bold text-white truncate max-w-[180px]">
+              <div className="text-xs font-mono font-bold text-white truncate max-w-[190px]">
                 {gn.label}
               </div>
               {gn.file && (
-                <div className="text-[10px] font-mono text-zinc-400 truncate mt-0.5 max-w-[180px]">
-                  {gn.file}:{gn.line}
+                <div className="text-[10px] font-mono text-zinc-400 truncate mt-0.5 max-w-[190px]">
+                  {gn.file}{gn.line ? `:${gn.line}` : ''}
                 </div>
               )}
             </div>
@@ -135,9 +155,9 @@ export default function GraphView() {
         },
         style: {
           backgroundColor: '#141518',
-          border: isHighComplexity ? '1px solid #f43f5e' : '1px solid #27292e',
+          border: isHighComplexity ? '1px solid #f43f5e' : (connCount && connCount > 0 ? '1px solid #3b82f6' : '1px solid #27292e'),
           borderRadius: '8px',
-          width: 220,
+          width: 230,
           color: '#ffffff',
           boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
         },
@@ -149,21 +169,34 @@ export default function GraphView() {
       .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
       .map((ge) => {
         const isCross = ge.kind === 'cross_service_api';
+        const isImport = ge.kind === 'imports';
+        const isCall = ge.kind === 'calls';
+
+        let strokeColor = '#818cf8'; // default indigo
+        if (isCross) strokeColor = '#38bdf8'; // sky blue
+        else if (isCall) strokeColor = '#34d399'; // emerald green
+        else if (isImport) strokeColor = '#a78bfa'; // violet/purple
+
+        const labelText = isCross ? (ge.method || 'API') : (ge.method || ge.kind || 'relates');
+
         return {
           id: ge.id,
           source: ge.source,
           target: ge.target,
-          animated: isCross || ge.isRuntimeObserved || ge.confidence > 0.9,
-          label: isCross ? ge.method : undefined,
-          labelStyle: isCross ? { fill: '#38bdf8', fontSize: 10, fontFamily: 'monospace' } : undefined,
+          animated: isCross || ge.isRuntimeObserved || isImport,
+          label: labelText,
+          labelStyle: { fill: strokeColor, fontSize: 10, fontFamily: 'monospace', fontWeight: 600 },
+          labelBgStyle: { fill: '#141518', fillOpacity: 0.9 },
+          labelBgPadding: [4, 2] as [number, number],
+          labelBgBorderRadius: 4,
           style: {
-            stroke: isCross ? '#38bdf8' : ge.isRuntimeObserved ? '#38bdf8' : (ge.confidence > 0.8 ? '#34d399' : '#71717a'),
-            strokeWidth: isCross ? 2.5 : ge.isRuntimeObserved ? 2 : 1.5,
-            strokeDasharray: isCross ? '5,5' : undefined,
+            stroke: strokeColor,
+            strokeWidth: isCross ? 2.5 : 1.5,
+            strokeDasharray: isCross ? '5,5' : (isImport ? '4,4' : undefined),
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: isCross ? '#38bdf8' : ge.isRuntimeObserved ? '#38bdf8' : (ge.confidence > 0.8 ? '#34d399' : '#71717a'),
+            color: strokeColor,
           },
         };
       });

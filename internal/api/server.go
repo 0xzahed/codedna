@@ -4,6 +4,7 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -287,6 +289,14 @@ func (s *Server) handleScanDetail(w http.ResponseWriter, r *http.Request, scanID
 	})
 }
 
+type fileConnection struct {
+	fromFile   string
+	toFile     string
+	kind       string
+	count      int
+	confidence float64
+}
+
 func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID int64) {
 	files, err := s.store.LoadFiles(scanID)
 	if err != nil {
@@ -304,16 +314,73 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 		return
 	}
 
-	// Filter options
 	filterType := r.URL.Query().Get("type")
 	searchQuery := strings.ToLower(r.URL.Query().Get("q"))
 
-	var nodes []model.GraphNode
-	var edges []model.GraphEdge
+	// Map symbol ID -> file
+	symToFile := make(map[string]string, len(syms))
+	for _, sym := range syms {
+		symToFile[sym.ID] = sym.File
+	}
 
-	nodeMap := make(map[string]bool)
+	fileSet := make(map[string]bool, len(files))
+	for _, f := range files {
+		fileSet[f.Path] = true
+	}
 
-	// File nodes
+	// 1. Build File-to-File connections
+	fileConns := make(map[string]*fileConnection)
+	nodeDegree := make(map[string]int)
+
+	for _, rel := range rels {
+		var fromFile, toFile string
+		if strings.HasPrefix(rel.FromID, "file:") {
+			fromFile = strings.TrimPrefix(rel.FromID, "file:")
+		} else if f, ok := symToFile[rel.FromID]; ok {
+			fromFile = f
+		}
+
+		if strings.HasPrefix(rel.ToID, "file:") {
+			toFile = strings.TrimPrefix(rel.ToID, "file:")
+		} else if f, ok := symToFile[rel.ToID]; ok {
+			toFile = f
+		}
+
+		if fromFile != "" && toFile != "" && fromFile != toFile && fileSet[fromFile] && fileSet[toFile] {
+			key := fromFile + "->" + toFile
+			if c, exists := fileConns[key]; exists {
+				c.count++
+				if rel.Confidence > c.confidence {
+					c.confidence = rel.Confidence
+				}
+			} else {
+				kind := string(rel.Kind)
+				if kind == "" {
+					kind = "calls"
+				}
+				fileConns[key] = &fileConnection{
+					fromFile:   fromFile,
+					toFile:     toFile,
+					kind:       kind,
+					count:      1,
+					confidence: rel.Confidence,
+				}
+			}
+			nodeDegree["file:"+fromFile]++
+			nodeDegree["file:"+toFile]++
+		}
+	}
+
+	// 2. Extract import statements from disk if file connections are few
+	repoRoot := s.repoRoot
+	if scanRoot, err := s.store.LoadRepoRootForScan(scanID); err == nil && scanRoot != "" {
+		repoRoot = scanRoot
+	}
+	s.extractFastFileImports(repoRoot, files, fileConns, nodeDegree)
+
+	var allNodes []model.GraphNode
+
+	// Collect file nodes
 	for _, f := range files {
 		if filterType != "" && filterType != "file" {
 			continue
@@ -321,23 +388,24 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 		if searchQuery != "" && !strings.Contains(strings.ToLower(f.Path), searchQuery) {
 			continue
 		}
-		nodes = append(nodes, model.GraphNode{
-			ID:         "file:" + f.Path,
+		nodeID := "file:" + f.Path
+		allNodes = append(allNodes, model.GraphNode{
+			ID:         nodeID,
 			Type:       "file",
 			Label:      filepath.Base(f.Path),
 			File:       f.Path,
 			Language:   f.Language,
 			Complexity: f.LOC,
 			Data: map[string]interface{}{
-				"size": f.Size,
-				"loc":  f.LOC,
-				"tags": f.Tags,
+				"size":        f.Size,
+				"loc":         f.LOC,
+				"tags":        f.Tags,
+				"connections": nodeDegree[nodeID],
 			},
 		})
-		nodeMap["file:"+f.Path] = true
 	}
 
-	// Symbol nodes (functions, classes, methods)
+	// Collect symbol nodes
 	for _, sym := range syms {
 		if filterType != "" && string(sym.Kind) != filterType {
 			continue
@@ -345,11 +413,9 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 		if searchQuery != "" && !strings.Contains(strings.ToLower(sym.Name), searchQuery) && !strings.Contains(strings.ToLower(sym.File), searchQuery) {
 			continue
 		}
-
-		nodeType := string(sym.Kind)
-		nodes = append(nodes, model.GraphNode{
+		allNodes = append(allNodes, model.GraphNode{
 			ID:         sym.ID,
-			Type:       nodeType,
+			Type:       string(sym.Kind),
 			Label:      sym.Name,
 			File:       sym.File,
 			Line:       sym.Line,
@@ -362,10 +428,9 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 				"parentClass":   sym.ParentClassName,
 			},
 		})
-		nodeMap[sym.ID] = true
 	}
 
-	// Smart node limiting for UI rendering performance (prevents browser canvas freeze on 5k+ nodes)
+	// Smart node limiting for UI rendering performance (prioritizing connected nodes)
 	limitStr := r.URL.Query().Get("limit")
 	limit := 300
 	if limitStr != "" {
@@ -376,39 +441,70 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 		limit = 800
 	}
 
-	if len(nodes) > limit {
-		sort.Slice(nodes, func(i, j int) bool {
-			return nodes[i].Complexity > nodes[j].Complexity
+	if len(allNodes) > limit {
+		sort.Slice(allNodes, func(i, j int) bool {
+			degI := nodeDegree[allNodes[i].ID]
+			degJ := nodeDegree[allNodes[j].ID]
+			if degI != degJ {
+				return degI > degJ
+			}
+			return allNodes[i].Complexity > allNodes[j].Complexity
 		})
-		nodes = nodes[:limit]
-		nodeMap = make(map[string]bool)
-		for _, n := range nodes {
-			nodeMap[n.ID] = true
+		allNodes = allNodes[:limit]
+	}
+
+	nodeMap := make(map[string]bool, len(allNodes))
+	for _, n := range allNodes {
+		nodeMap[n.ID] = true
+	}
+
+	var edges []model.GraphEdge
+	edgeSeen := make(map[string]bool)
+
+	// 1. Add file-to-file edges
+	for _, fc := range fileConns {
+		srcID := "file:" + fc.fromFile
+		tgtID := "file:" + fc.toFile
+		if nodeMap[srcID] && nodeMap[tgtID] {
+			edgeID := fmt.Sprintf("fe:%s->%s", fc.fromFile, fc.toFile)
+			if !edgeSeen[edgeID] {
+				edgeSeen[edgeID] = true
+				methodLabel := fc.kind
+				if fc.count > 1 {
+					methodLabel = fmt.Sprintf("%s (%d)", fc.kind, fc.count)
+				}
+				edges = append(edges, model.GraphEdge{
+					ID:         edgeID,
+					Source:     srcID,
+					Target:     tgtID,
+					Kind:       fc.kind,
+					Confidence: fc.confidence,
+					Method:     methodLabel,
+				})
+			}
 		}
 	}
 
-	// Graph edges
+	// 2. Add symbol-to-symbol edges
 	for i, rel := range rels {
-		source := rel.FromID
-		target := rel.ToID
-		if target == "" {
+		if rel.ToID == "" {
 			continue
 		}
-
-		// Ensure both source and target nodes exist in the rendered graph
-		if !nodeMap[source] || !nodeMap[target] {
-			continue
+		if nodeMap[rel.FromID] && nodeMap[rel.ToID] {
+			edgeID := fmt.Sprintf("se:%d", i)
+			if !edgeSeen[edgeID] {
+				edgeSeen[edgeID] = true
+				edges = append(edges, model.GraphEdge{
+					ID:         edgeID,
+					Source:     rel.FromID,
+					Target:     rel.ToID,
+					Kind:       string(rel.Kind),
+					Confidence: rel.Confidence,
+					Method:     string(rel.Method),
+					Locations:  rel.Locations,
+				})
+			}
 		}
-
-		edges = append(edges, model.GraphEdge{
-			ID:         fmt.Sprintf("e-%d", i),
-			Source:     source,
-			Target:     target,
-			Kind:       string(rel.Kind),
-			Confidence: rel.Confidence,
-			Method:     string(rel.Method),
-			Locations:  rel.Locations,
-		})
 	}
 
 	// Include runtime edges if present
@@ -421,9 +517,131 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 	}
 
 	writeJSON(w, http.StatusOK, model.GraphData{
-		Nodes: nodes,
+		Nodes: allNodes,
 		Edges: edges,
 	})
+}
+
+func (s *Server) extractFastFileImports(
+	repoRoot string,
+	files []model.FileNode,
+	fileConns map[string]*fileConnection,
+	nodeDegree map[string]int,
+) {
+	if repoRoot == "" || len(files) == 0 {
+		return
+	}
+
+	fileSet := make(map[string]bool, len(files))
+	for _, f := range files {
+		fileSet[f.Path] = true
+	}
+
+	pyFromRe := regexp.MustCompile(`^\s*from\s+([a-zA-Z0-9_\.]+)\s+import`)
+	pyImpRe := regexp.MustCompile(`^\s*import\s+([a-zA-Z0-9_\.]+)`)
+	jsImpRe := regexp.MustCompile(`(?:import\s+.*?from\s+['"]|require\s*\(\s*['"])([^'"]+)['"]`)
+	goImpRe := regexp.MustCompile(`^\s*(?:import\s+)?["']([^"']+)["']`)
+
+	for _, f := range files {
+		ext := filepath.Ext(f.Path)
+		if ext != ".py" && ext != ".go" && ext != ".ts" && ext != ".tsx" && ext != ".js" && ext != ".jsx" {
+			continue
+		}
+
+		fullPath := filepath.Join(repoRoot, f.Path)
+		file, err := os.Open(fullPath)
+		if err != nil {
+			continue
+		}
+
+		scanner := bufio.NewScanner(file)
+		lineNum := 0
+		dir := filepath.Dir(f.Path)
+
+		for scanner.Scan() {
+			lineNum++
+			if lineNum > 120 {
+				break
+			}
+			line := scanner.Text()
+
+			var targetFile string
+
+			// Python imports
+			if ext == ".py" {
+				var mod string
+				if m := pyFromRe.FindStringSubmatch(line); len(m) >= 2 {
+					mod = m[1]
+				} else if m := pyImpRe.FindStringSubmatch(line); len(m) >= 2 {
+					mod = m[1]
+				}
+				if mod != "" {
+					cand := strings.ReplaceAll(mod, ".", "/") + ".py"
+					candInit := strings.ReplaceAll(mod, ".", "/") + "/__init__.py"
+					relCand := filepath.Join(dir, cand)
+					relInit := filepath.Join(dir, candInit)
+
+					if fileSet[cand] {
+						targetFile = cand
+					} else if fileSet[candInit] {
+						targetFile = candInit
+					} else if fileSet[relCand] {
+						targetFile = relCand
+					} else if fileSet[relInit] {
+						targetFile = relInit
+					}
+				}
+			}
+
+			// JS / TS imports
+			if (ext == ".ts" || ext == ".tsx" || ext == ".js" || ext == ".jsx") && targetFile == "" {
+				if m := jsImpRe.FindStringSubmatch(line); len(m) >= 2 {
+					importPath := m[1]
+					if strings.HasPrefix(importPath, ".") {
+						resolvedBase := filepath.Clean(filepath.Join(dir, importPath))
+						for _, testExt := range []string{"", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js"} {
+							if fileSet[resolvedBase+testExt] {
+								targetFile = resolvedBase + testExt
+								break
+							}
+						}
+					}
+				}
+			}
+
+			// Go imports
+			if ext == ".go" && targetFile == "" {
+				if m := goImpRe.FindStringSubmatch(line); len(m) >= 2 {
+					importPath := m[1]
+					for _, otherF := range files {
+						if otherF.Path != f.Path && strings.HasSuffix(otherF.Path, ".go") {
+							otherDir := filepath.Dir(otherF.Path)
+							if strings.HasSuffix(importPath, otherDir) {
+								targetFile = otherF.Path
+								break
+							}
+						}
+					}
+				}
+			}
+
+			if targetFile != "" && targetFile != f.Path {
+				key := f.Path + "->" + targetFile
+				if _, exists := fileConns[key]; !exists {
+					fileConns[key] = &fileConnection{
+						fromFile:   f.Path,
+						toFile:     targetFile,
+						kind:       "imports",
+						count:      1,
+						confidence: 0.9,
+					}
+					nodeDegree["file:"+f.Path]++
+					nodeDegree["file:"+targetFile]++
+				}
+			}
+		}
+		file.Close()
+	}
 }
 
 func (s *Server) handleScanSymbols(w http.ResponseWriter, r *http.Request, scanID int64) {

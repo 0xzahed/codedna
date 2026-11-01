@@ -135,6 +135,8 @@ func Run(repoRoot string, st *store.Store, progress scanner.ScanProgress) (*Pipe
 	// 5. Build symbol index & resolve relationships
 	idx := analysis.Build(parseResults, scanRes.Files)
 	rels := idx.Resolve(parseResults)
+	fileEdges := idx.FileEdges(parseResults)
+	rels = append(rels, fileEdges...)
 
 	// 6. Construct module graph & detect issues
 	fileGraph := idx.ModuleGraph(parseResults)

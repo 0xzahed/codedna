@@ -3,6 +3,7 @@
 package analysis
 
 import (
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -454,31 +455,64 @@ func (i *Index) FileEdges(results []*model.FileParseResult) []model.Relationship
 // resolveImportToFile maps an import statement to repo-internal file targets.
 func (i *Index) resolveImportToFile(file string, imp model.Import, results []*model.FileParseResult) []string {
 	var targets []string
-	base := strings.TrimPrefix(strings.TrimSpace(imp.Path), "./")
-	if base == "" || strings.HasPrefix(base, "http") {
+	cleanImp := strings.TrimSpace(imp.Path)
+	if cleanImp == "" || strings.HasPrefix(cleanImp, "http://") || strings.HasPrefix(cleanImp, "https://") {
 		return nil
 	}
-	// python relative: relative_import begins with "."
+
+	base := strings.TrimPrefix(cleanImp, "./")
+	dir := filepath.Dir(file)
+
+	// 1. Python imports (dots to slashes)
+	pyPath := strings.ReplaceAll(base, ".", "/")
 	for _, r := range results {
-		candidate := r.File
-		lc := strings.ToLower(candidate)
+		lc := strings.ToLower(r.File)
 		if strings.HasSuffix(lc, ".py") {
-			if strings.HasSuffix(lc, strings.ToLower(base)+".py") || strings.HasSuffix(lc, "/"+strings.ToLower(base)+".py") {
+			// Module match: account/api/serializers.py
+			if strings.HasSuffix(lc, strings.ToLower(pyPath)+".py") || strings.HasSuffix(lc, "/"+strings.ToLower(pyPath)+".py") {
+				targets = append(targets, r.File)
+			}
+			// Package match: account/api/__init__.py
+			if strings.HasSuffix(lc, strings.ToLower(pyPath)+"/__init__.py") || strings.HasSuffix(lc, "/"+strings.ToLower(pyPath)+"/__init__.py") {
+				targets = append(targets, r.File)
+			}
+			// Relative to current file's directory
+			relPy := filepath.Join(dir, pyPath)
+			if strings.EqualFold(r.File, relPy+".py") || strings.EqualFold(r.File, filepath.Join(relPy, "__init__.py")) {
 				targets = append(targets, r.File)
 			}
 		}
 	}
-	exts := []string{"", ".ts", ".tsx", ".js", ".mjs", ".jsx", ".json"}
+
+	// 2. JS / TS / Web imports
+	exts := []string{"", ".ts", ".tsx", ".js", ".mjs", ".jsx", ".json", "/index.ts", "/index.tsx", "/index.js"}
 	for _, r := range results {
 		lc := strings.ToLower(r.File)
+		relTarget := filepath.Join(dir, base)
 		for _, ext := range exts {
-			stem := strings.ToLower(base)
+			if strings.EqualFold(r.File, relTarget+ext) {
+				targets = append(targets, r.File)
+			}
+		}
+		aliasTarget := strings.TrimPrefix(strings.TrimPrefix(base, "@/"), "~/")
+		for _, ext := range exts {
+			stem := strings.ToLower(aliasTarget)
 			if lc == stem+ext || strings.HasSuffix(lc, "/"+stem+ext) {
 				targets = append(targets, r.File)
 			}
 		}
 	}
-	_ = file
+
+	// 3. Go package imports
+	for _, r := range results {
+		if strings.HasSuffix(r.File, ".go") {
+			pkgDir := filepath.Dir(r.File)
+			if strings.HasSuffix(base, pkgDir) || strings.EqualFold(base, pkgDir) {
+				targets = append(targets, r.File)
+			}
+		}
+	}
+
 	return uniqueStrings(targets)
 }
 
