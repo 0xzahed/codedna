@@ -52,7 +52,7 @@ export default function Sidebar() {
         </div>
         <div>
           <div className="font-bold tracking-tight text-white flex items-center gap-2">
-            CodeDNA <span className="text-[10px] bg-dna-blue/10 text-dna-blue px-1.5 py-0.5 rounded font-mono border border-dna-blue/30">2.0</span>
+            CodeDNA <span className="text-[10px] bg-dna-blue/10 text-dna-blue px-1.5 py-0.5 rounded font-mono border border-dna-blue/30">2.4</span>
           </div>
           <div className="text-[11px] text-zinc-400">Software Intelligence</div>
         </div>
