@@ -1,0 +1,86 @@
+# CodeDNA Task & Feature Tracker 🚀
+
+This document tracks all features, bug fixes, performance optimizations, and architectural tasks for CodeDNA. Every task follows the **Feature-Wise / Task-Wise Commit Protocol**:
+1. Single logical unit of work per commit.
+2. Conventional commit format (`feat:`, `fix:`, `perf:`, `docs:`, `test:`).
+3. Full verification (`go test`, static build, UI check) before commit.
+4. Update task status here (`[x]`) and push to GitHub `main`.
+
+---
+
+## 🏁 Completed Milestones & Tasks
+
+### Milestone 1: Platform Foundation & Core Intelligence (v2.0.0)
+- [x] **AST Parsing Engine:** Tree-sitter parsers for Go, Python, TypeScript, JavaScript, Java, PHP.
+- [x] **Symbol & Call Resolution:** Cross-file call resolution with confidence metrics.
+- [x] **Graph Analysis Algorithms:** Tarjan's SCC for cycle detection, BFS reachability.
+- [x] **Git Diff Impact Analyzer:** Blast-radius propagation and modified symbol mapping.
+- [x] **Architecture Guard:** Layer boundary rules and drift detection.
+- [x] **Local Storage Engine:** SQLite persistence with migrations and zero external database dependencies.
+- [x] **Next.js Web Dashboard:** React Flow dependency canvas, dark-first UI, and 9 core views.
+
+### Milestone 2: Dynamic Repositories & Engine Optimization (v2.1.0)
+- [x] **Task 2.1 — Multi-Core Parallel Parsing Engine:**
+  - Implemented 16-worker pool with channel pipeline (`internal/engine/engine.go`).
+  - Added fast skip lists for build/minified assets (`dist`, `static_cdn`, `staticfiles`, `*.min.js`).
+  - *Benchmark:* Reduced 639-file scan time from **124.95s to 5.44s** (**22x speedup**).
+  - *Commit:* `6aa8867` (`perf(engine): 22x parallel AST parsing, real-time SSE scan progress`)
+
+- [x] **Task 2.2 — Any Local Path or Remote GitHub URL Importer:**
+  - Added `scanner.ResolveTarget()` to clone GitHub repos or resolve local filesystem paths.
+  - Added "Open Codebase" modal with path validation in UI header.
+  - *Commit:* `892d073` (`feat(scanner): add ResolveTarget for any local path or remote GitHub URL`)
+
+- [x] **Task 2.3 — Dynamic Multi-Repo Source Code Inspector:**
+  - Added `LoadRepoRootForScan(scanID)` and `FindRepoRootForFile(path)` fallback to resolve external codebase root paths.
+  - Fixed 404 error when clicking files in external repositories (`GET /api/scans/:id/file`).
+  - Added smooth auto-scroll to highlighted symbol lines in `SourceDrawer`.
+  - *Commit:* `a8fadb3` (`feat: multi-repo workspace linking and dynamic per-scan source code resolution`)
+
+- [x] **Task 2.4 — Multi-Repository Workspace & Cross-Service API Architecture:**
+  - Created `internal/workspace/` engine to scan API endpoints (Django, FastAPI, Express, Next.js, Go).
+  - Fuzzy and prefix route matching between frontend API calls (`fetch`, `axios`) and backend endpoints.
+  - "Connect Repos" modal to compose full-stack system architecture maps.
+  - *Commit:* `a8fadb3` (`feat: multi-repo workspace linking`)
+
+- [x] **Task 2.5 — File-to-File Dependency Resolution & Architectural Cluster Graph:**
+  - Connected file-to-file call aggregations and direct import links (`imports`, `calls`).
+  - Directory-based hierarchical architectural layout in React Flow.
+  - Directional arrows and colored edge labels (Violet: Imports, Green: Calls, Sky Blue: Cross-Service API).
+  - Rendered 729+ active relationship edges on real codebases.
+  - *Commit:* `73ef2a0` (`feat: complete file-to-file dependency resolution, import links, and architectural cluster graph rendering`)
+
+- [x] **Task 2.6 — GitHub Remote Repository & CI Integration:**
+  - Created public GitHub repository [0xzahed/codedna](https://github.com/0xzahed/codedna).
+  - Pushed all 9 feature-wise commits with conventional messages.
+
+---
+
+## 📌 Active & Upcoming Roadmap Tasks
+
+### Milestone 3: Real-Time Collaboration & Advanced Visual Analytics (v2.2.0)
+- [ ] **Task 3.1 — Interactive Graph Export & Shareable Snapshots:**
+  - Export system architecture map as SVG / High-Res PNG.
+  - Export C4 / Mermaid diagram markdown.
+- [ ] **Task 3.2 — Custom Architectural Rules Editor in UI:**
+  - Create and test custom architectural boundaries (e.g., `controllers cannot import models directly`) directly in the Settings/Arch UI.
+- [ ] **Task 3.3 — Real-Time Live Hot-Reloading Watcher:**
+  - Automatically re-parse modified files incrementally and push live delta updates over SSE without full re-scan.
+- [ ] **Task 3.4 — AI-Powered Architecture Refactoring Suggestions:**
+  - Use Ollama / Local LLM to suggest refactoring steps for detected circular dependencies and layer violations.
+
+---
+
+## 🛠️ Feature Commit Protocol
+Every subsequent change must follow this cycle:
+```bash
+# 1. Implement feature / task
+# 2. Run unit tests & static build
+go test -v -race ./...
+cd web && npm run build
+# 3. Commit task-wise with conventional format
+git add <files>
+git commit -m "<type>(<scope>): <clear descriptive summary>"
+# 4. Push to remote
+git push origin main
+```

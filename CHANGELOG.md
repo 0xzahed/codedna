@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-11-01
+
+### Added
+- **Multi-Repository Workspace Linking**: Connect separate repositories (e.g., Next.js frontend + Django/FastAPI/Express backend) into a unified cross-service system architecture map.
+- **Cross-Service HTTP API Discovery**: Automatic discovery of backend endpoints (`urls.py`, FastAPI routers, Express routes) and frontend API consumer calls (`fetch`, `axios`).
+- **File-to-File Dependency Flow**: File import and call relationships with directional arrows and color-coded edge badges (Violet: Imports, Green: Calls, Sky Blue: Cross-Service API).
+- **Architectural Directory Clustering**: Hierarchical React Flow canvas layout grouping files by module/folder.
+- **Dynamic Codebase Scanner**: "Open Codebase" modal supporting arbitrary local filesystem paths and remote GitHub URLs (`https://github.com/...`).
+- **Dynamic Source Code Viewer**: Per-scan repository root path resolution with smooth auto-scroll to highlighted symbol lines in `SourceDrawer`.
+- **Live SSE Scan Progress Stream**: Real-time progress bar displaying file count, percentage, and current filename during indexing.
+
+### Performance
+- **Parallel AST Parsing Engine**: 16-worker pipeline reducing large repository scan times from 124s to 5.4s (22x speedup).
+- **High-Density Node Limiting**: Intelligent connectivity-based node prioritization keeping browser canvas fluid at 60 FPS.
+
 ## [2.0.0] - 2026-11-01
 
 ### Added
