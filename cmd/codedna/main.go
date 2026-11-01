@@ -25,6 +25,7 @@ import (
 	"github.com/codedna/codedna/internal/runtime"
 	"github.com/codedna/codedna/internal/scanner"
 	"github.com/codedna/codedna/internal/store"
+	"github.com/codedna/codedna/internal/sysdesign"
 	"github.com/codedna/codedna/internal/watcher"
 )
 
@@ -60,6 +61,8 @@ func main() {
 		runBlame(args)
 	case "check":
 		runCheck(args)
+	case "design", "sysdesign":
+		runDesign(args)
 	case "version", "--version", "-v":
 		fmt.Printf("CodeDNA version %s\n", version)
 	case "help", "--help", "-h":
@@ -91,6 +94,7 @@ func printUsage() {
 	fmt.Println("  watch <path>          Watches directory for changes and live-updates index")
 	fmt.Println("  blame, knowledge      Analyzes git line ownership, team knowledge map & bus factor")
 	fmt.Println("  check                 Automated CI/CD architecture quality gate & rule enforcement")
+	fmt.Println("  design                Reconstructs multi-tier system design, data flow & patterns")
 	fmt.Println("  runtime enable        Configures opt-in runtime instrumentation adapters")
 	fmt.Println("  version               Prints version information")
 	fmt.Println("\nRun 'codedna <command> --help' for details on a specific command.")
@@ -692,4 +696,86 @@ func runCheck(args []string) {
 	}
 
 	fmt.Println("\n✔ CI Quality Gate PASSED: All architectural boundary guardrails respected.")
+}
+
+func runDesign(args []string) {
+	fs := flag.NewFlagSet("design", flag.ExitOnError)
+	target := fs.String("repo", ".", "Repository root path to analyze")
+	jsonOut := fs.Bool("json", false, "Output system design report as JSON")
+	fs.Parse(args)
+
+	st, err := getStore()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Store error: %v\n", err)
+		os.Exit(1)
+	}
+	defer st.Close()
+
+	resolvedRepo, err := scanner.ResolveTarget(*target)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Target error: %v\n", err)
+		os.Exit(1)
+	}
+
+	res, err := engine.Run(resolvedRepo, st, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Analysis error: %v\n", err)
+		os.Exit(1)
+	}
+
+	report := sysdesign.AnalyzeSystemDesign(res.Files, res.Symbols, res.Rels)
+
+	if *jsonOut {
+		b, _ := json.MarshalIndent(report, "", "  ")
+		fmt.Println(string(b))
+		return
+	}
+
+	fmt.Println("======================================================================")
+	fmt.Printf("  CodeDNA System Design & Multi-Tier Architecture Analysis\n")
+	fmt.Printf("  Repository: %s\n", resolvedRepo)
+	fmt.Println("======================================================================")
+	fmt.Printf("Architecture Style: %s\n", report.ArchitectureStyle)
+	fmt.Printf("Reliability Score:  %.1f / 100\n", report.ReliabilityScore)
+	fmt.Printf("Summary:            %s\n\n", report.Summary)
+
+	fmt.Println("[ SYSTEM DESIGN TIERS ]")
+	for _, t := range report.Tiers {
+		status := "Active"
+		if t.FileCount == 0 {
+			status = "Unused"
+		}
+		fmt.Printf("  %d. %-32s [%s] (%3d files, %4d symbols)\n", t.Order, t.Name, status, t.FileCount, t.SymbolCount)
+		fmt.Printf("     └── %s\n", t.Description)
+	}
+
+	if len(report.DataFlow) > 0 {
+		fmt.Println("\n[ DATA FLOW & PROTOCOL HOPS ]")
+		for _, hop := range report.DataFlow {
+			fmt.Printf("  • %-22s ──[ %-30s ]──> %-22s (%d calls)\n",
+				hop.FromTier, hop.Protocol, hop.ToTier, hop.CallCount)
+		}
+	}
+
+	if len(report.DetectedPatterns) > 0 {
+		fmt.Println("\n[ DETECTED SOFTWARE DESIGN PATTERNS ]")
+		for _, p := range report.DetectedPatterns {
+			fmt.Printf("  • [%s] %s (Confidence: %.0f%%)\n", p.Category, p.Name, p.Confidence*100)
+			fmt.Printf("    Description: %s\n", p.Description)
+			for _, ev := range p.Evidence {
+				fmt.Printf("    Evidence:    %s\n", ev)
+			}
+			if p.Tradeoffs != "" {
+				fmt.Printf("    Trade-offs:  %s\n", p.Tradeoffs)
+			}
+			fmt.Println()
+		}
+	}
+
+	if len(report.BottleneckHotspots) > 0 {
+		fmt.Println("[ ARCHITECTURAL BOTTLENECK HOTSPOTS ]")
+		for _, b := range report.BottleneckHotspots {
+			fmt.Printf("  • %s\n", b)
+		}
+	}
 }
