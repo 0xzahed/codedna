@@ -1,0 +1,508 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useAppStore } from '../../lib/store';
+import { 
+  fetchSystemDesign, 
+  SystemDesignReport, 
+  SystemTier, 
+  DataFlowHop, 
+  DetectedPattern,
+  PatternCategory 
+} from '../../lib/api';
+import { 
+  Workflow, 
+  Layers, 
+  ArrowRight, 
+  ShieldCheck, 
+  AlertTriangle, 
+  CheckCircle2, 
+  Cpu, 
+  Database, 
+  Globe, 
+  Server, 
+  Radio, 
+  ExternalLink, 
+  Sparkles, 
+  RotateCw, 
+  Code2, 
+  Compass,
+  FileCode,
+  Zap
+} from 'lucide-react';
+
+const TIER_ICONS: Record<string, React.ElementType> = {
+  client_gateway: Globe,
+  api_presentation: Server,
+  domain_service: Cpu,
+  persistence_storage: Database,
+  async_messaging: Radio,
+  external_integration: ExternalLink,
+};
+
+const TIER_COLORS: Record<string, { bg: string; text: string; border: string; glow: string }> = {
+  client_gateway: {
+    bg: 'bg-sky-500/10',
+    text: 'text-sky-400',
+    border: 'border-sky-500/30',
+    glow: 'hover:border-sky-400/50',
+  },
+  api_presentation: {
+    bg: 'bg-indigo-500/10',
+    text: 'text-indigo-400',
+    border: 'border-indigo-500/30',
+    glow: 'hover:border-indigo-400/50',
+  },
+  domain_service: {
+    bg: 'bg-emerald-500/10',
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/30',
+    glow: 'hover:border-emerald-400/50',
+  },
+  persistence_storage: {
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-400',
+    border: 'border-amber-500/30',
+    glow: 'hover:border-amber-400/50',
+  },
+  async_messaging: {
+    bg: 'bg-purple-500/10',
+    text: 'text-purple-400',
+    border: 'border-purple-500/30',
+    glow: 'hover:border-purple-400/50',
+  },
+  external_integration: {
+    bg: 'bg-rose-500/10',
+    text: 'text-rose-400',
+    border: 'border-rose-500/30',
+    glow: 'hover:border-rose-400/50',
+  },
+};
+
+export default function SystemDesignView() {
+  const { scanId } = useAppStore();
+  const [report, setReport] = useState<SystemDesignReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedTier, setSelectedTier] = useState<SystemTier | null>(null);
+  const [patternFilter, setPatternFilter] = useState<'All' | PatternCategory>('All');
+  const [expandedHop, setExpandedHop] = useState<number | null>(null);
+
+  const loadData = () => {
+    setLoading(true);
+    fetchSystemDesign(scanId)
+      .then((data) => {
+        setReport(data);
+        if (data.tiers && data.tiers.length > 0) {
+          const firstActive = data.tiers.find(t => t.fileCount > 0) || data.tiers[0];
+          setSelectedTier(firstActive);
+        }
+      })
+      .catch((err) => console.error('Failed to load system design report:', err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [scanId]);
+
+  const activeTiers = report?.tiers.filter((t) => t.fileCount > 0) || [];
+
+  const filteredPatterns = (report?.detectedPatterns || []).filter((p) => {
+    if (patternFilter === 'All') return true;
+    return p.category === patternFilter;
+  });
+
+  return (
+    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-charcoal-750 pb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-dna-blue/10 border border-dna-blue/30 flex items-center justify-center text-dna-blue">
+              <Workflow className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                System Design &amp; Architecture Flow
+              </h1>
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Multi-tier structural breakdown, protocol data flow hops, software pattern recognition, and architectural bottleneck detection.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-xs font-medium text-zinc-300 hover:text-white transition-all disabled:opacity-50"
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Re-analyze</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Metrics Banner */}
+      {report && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5">
+            <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider font-mono">Architecture Style</div>
+            <div className="text-sm font-semibold text-white mt-2 line-clamp-2">{report.architectureStyle}</div>
+            <div className="text-xs text-zinc-500 mt-1">{activeTiers.length} of {report.tiers.length} Tiers Active</div>
+          </div>
+
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5">
+            <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider font-mono">Reliability Score</div>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className={`text-2xl font-bold font-mono ${
+                report.reliabilityScore >= 80 ? 'text-emerald-400' :
+                report.reliabilityScore >= 60 ? 'text-amber-400' : 'text-rose-400'
+              }`}>
+                {report.reliabilityScore.toFixed(1)}
+              </span>
+              <span className="text-xs text-zinc-500">/ 100</span>
+            </div>
+            <div className="text-xs text-zinc-500 mt-1">Based on boundary cohesion &amp; isolation</div>
+          </div>
+
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5">
+            <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider font-mono">Cross-Tier Flows</div>
+            <div className="text-2xl font-bold font-mono text-white mt-2">{report.dataFlow.length}</div>
+            <div className="text-xs text-zinc-500 mt-1">Inter-tier protocol communication hops</div>
+          </div>
+
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5">
+            <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider font-mono">Recognized Patterns</div>
+            <div className="text-2xl font-bold font-mono text-dna-blue mt-2">{report.detectedPatterns.length}</div>
+            <div className="text-xs text-zinc-500 mt-1">Architectural, structural &amp; creational</div>
+          </div>
+        </div>
+      )}
+
+      {/* Tiers Visual Architecture Grid */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Layers className="w-5 h-5 text-dna-blue" />
+            <span>Multi-Tier Architecture Topology</span>
+          </h2>
+          <span className="text-xs text-zinc-400">Click a tier to inspect files &amp; key symbols</span>
+        </div>
+
+        {report && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {report.tiers.map((tier) => {
+              const Icon = TIER_ICONS[tier.id] || Layers;
+              const style = TIER_COLORS[tier.id] || {
+                bg: 'bg-zinc-800',
+                text: 'text-zinc-300',
+                border: 'border-zinc-700',
+                glow: 'hover:border-zinc-500',
+              };
+              const isSelected = selectedTier?.id === tier.id;
+
+              return (
+                <div
+                  key={tier.id}
+                  onClick={() => setSelectedTier(tier)}
+                  className={`cursor-pointer rounded-xl p-5 border transition-all duration-200 ${
+                    isSelected
+                      ? `bg-charcoal-850 ${style.border} ring-1 ring-dna-blue/40 shadow-lg shadow-dna-blue/5`
+                      : `bg-charcoal-900 border-charcoal-750 ${style.glow} hover:bg-charcoal-850/60`
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${style.bg} border ${style.border} flex items-center justify-center ${style.text}`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-charcoal-800 border border-charcoal-700 text-zinc-400">
+                            Tier {tier.order}
+                          </span>
+                          <h3 className="text-sm font-semibold text-white">{tier.name}</h3>
+                        </div>
+                        <div className="text-[11px] text-zinc-400 mt-1 flex items-center gap-3 font-mono">
+                          <span>{tier.fileCount} files</span>
+                          <span>•</span>
+                          <span>{tier.symbolCount} symbols</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-zinc-400 mt-3 line-clamp-2 leading-relaxed">
+                    {tier.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Selected Tier Drill-down Drawer */}
+        {selectedTier && (
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-6 mt-4 space-y-5">
+            <div className="flex items-center justify-between border-b border-charcoal-800 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-dna-blue border border-dna-blue/30">
+                  Tier {selectedTier.order} Inspection
+                </span>
+                <h4 className="text-base font-semibold text-white">{selectedTier.name}</h4>
+              </div>
+              <div className="text-xs font-mono text-zinc-400">
+                {selectedTier.files?.length || 0} Files • {selectedTier.symbolCount} Symbols
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Files in Tier */}
+              <div>
+                <h5 className="text-xs font-medium text-zinc-300 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
+                  <FileCode className="w-4 h-4 text-dna-blue" />
+                  <span>Component Files ({selectedTier.files?.length || 0})</span>
+                </h5>
+                <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 max-h-56 overflow-y-auto space-y-1.5">
+                  {selectedTier.files && selectedTier.files.length > 0 ? (
+                    selectedTier.files.map((file) => (
+                      <div key={file} className="text-xs font-mono text-zinc-300 hover:text-white flex items-center gap-2 py-1 border-b border-charcoal-850/60 last:border-0">
+                        <span className="text-zinc-600">/</span>
+                        <span className="truncate">{file}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-zinc-500 py-3 text-center">No files classified in this tier.</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Key Symbols in Tier */}
+              <div>
+                <h5 className="text-xs font-medium text-zinc-300 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
+                  <Code2 className="w-4 h-4 text-emerald-400" />
+                  <span>Representative Symbols ({selectedTier.keySymbols?.length || 0})</span>
+                </h5>
+                <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 max-h-56 overflow-y-auto space-y-1.5">
+                  {selectedTier.keySymbols && selectedTier.keySymbols.length > 0 ? (
+                    selectedTier.keySymbols.map((sym) => (
+                      <div key={sym} className="text-xs font-mono text-emerald-300/90 py-1 border-b border-charcoal-850/60 last:border-0 flex items-center gap-2">
+                        <span className="text-emerald-500/50">ƒ</span>
+                        <span className="truncate">{sym}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-zinc-500 py-3 text-center">No symbols registered in this tier.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* End-to-End Data Flow Pipeline */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Compass className="w-5 h-5 text-indigo-400" />
+            <span>End-to-End Data Flow &amp; Inter-Tier Protocols</span>
+          </h2>
+          <span className="text-xs text-zinc-400">Reconstructed from AST call graph edges</span>
+        </div>
+
+        {report && report.dataFlow.length > 0 ? (
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl divide-y divide-charcoal-800 overflow-hidden">
+            {report.dataFlow.map((hop, idx) => {
+              const isExpanded = expandedHop === idx;
+              return (
+                <div key={idx} className="p-4 hover:bg-charcoal-850/40 transition-colors">
+                  <div 
+                    onClick={() => setExpandedHop(isExpanded ? null : idx)}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-zinc-300 border border-charcoal-700 capitalize">
+                        {hop.fromTier.replace('_', ' ')}
+                      </span>
+                      <ArrowRight className="w-4 h-4 text-dna-blue shrink-0" />
+                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-zinc-300 border border-charcoal-700 capitalize">
+                        {hop.toTier.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+                        {hop.protocol}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-white bg-charcoal-800 px-2 py-0.5 rounded border border-charcoal-700">
+                        {hop.callCount} calls
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Expandable Sample Calls */}
+                  {isExpanded && hop.sampleCalls && hop.sampleCalls.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-charcoal-800/80 pl-2">
+                      <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-2">Sample Cross-Boundary Invocations:</div>
+                      <div className="space-y-1">
+                        {hop.sampleCalls.map((call, cIdx) => (
+                          <div key={cIdx} className="text-xs font-mono text-zinc-300 bg-charcoal-950 px-3 py-1.5 rounded border border-charcoal-800">
+                            {call}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-8 text-center text-zinc-500 text-sm">
+            No cross-tier data flows detected in the current codebase graph.
+          </div>
+        )}
+      </div>
+
+      {/* Software Design Patterns Gallery */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-400" />
+            <span>Recognized Software Design Patterns</span>
+          </h2>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 bg-charcoal-900 p-1 rounded-lg border border-charcoal-750 text-xs font-medium">
+            {(['All', 'Architectural', 'Structural', 'Creational', 'Behavioral'] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setPatternFilter(cat)}
+                className={`px-3 py-1 rounded-md transition-all ${
+                  patternFilter === cat
+                    ? 'bg-dna-blue text-white shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {filteredPatterns.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredPatterns.map((pat) => (
+              <div
+                key={pat.id}
+                className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3 hover:border-charcoal-600 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold border ${
+                        pat.category === 'Architectural' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                        pat.category === 'Structural' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                        pat.category === 'Creational' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                        'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      }`}>
+                        {pat.category}
+                      </span>
+                      <h3 className="text-sm font-semibold text-white">{pat.name}</h3>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className="text-xs font-mono font-bold text-dna-blue">
+                      {(pat.confidence * 100).toFixed(0)}%
+                    </span>
+                    <span className="text-[10px] text-zinc-500 block">confidence</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  {pat.description}
+                </p>
+
+                {/* Evidence List */}
+                <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 space-y-1.5">
+                  <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Identified Evidence:</div>
+                  {pat.evidence.map((ev, eIdx) => (
+                    <div key={eIdx} className="text-xs text-zinc-300 flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>{ev}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Trade-offs */}
+                {pat.tradeoffs && (
+                  <div className="text-xs text-zinc-400 border-t border-charcoal-800/80 pt-2.5">
+                    <span className="font-semibold text-zinc-300">Engineering Trade-offs: </span>
+                    <span>{pat.tradeoffs}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-8 text-center text-zinc-500 text-sm">
+            No design patterns match the selected filter.
+          </div>
+        )}
+      </div>
+
+      {/* Architectural Bottleneck Hotspots & Key Entrypoints */}
+      {report && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Bottlenecks */}
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <span>Architectural Bottleneck &amp; Hotspot Diagnostics</span>
+            </h3>
+            <div className="space-y-2">
+              {report.bottleneckHotspots.map((b, idx) => (
+                <div
+                  key={idx}
+                  className={`text-xs p-3 rounded-lg border font-mono ${
+                    b.includes('Risk')
+                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                      : b.includes('Warning') || b.includes('Traffic')
+                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                  }`}
+                >
+                  {b}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Key Entrypoints */}
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Zap className="w-4 h-4 text-dna-blue" />
+              <span>Primary Application Entrypoints</span>
+            </h3>
+            <div className="space-y-2">
+              {report.keyEntrypoints.length > 0 ? (
+                report.keyEntrypoints.map((ep, idx) => (
+                  <div key={idx} className="text-xs font-mono text-zinc-300 bg-charcoal-950 p-2.5 rounded border border-charcoal-800 flex items-center gap-2">
+                    <span className="text-dna-blue">➔</span>
+                    <span className="truncate">{ep}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-zinc-500 py-3">No entrypoints automatically detected.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
