@@ -58,6 +58,8 @@ func main() {
 		runRuntime(args)
 	case "blame", "knowledge":
 		runBlame(args)
+	case "check":
+		runCheck(args)
 	case "version", "--version", "-v":
 		fmt.Printf("CodeDNA version %s\n", version)
 	case "help", "--help", "-h":
@@ -88,6 +90,7 @@ func printUsage() {
 	fmt.Println("  serve                 Starts REST API server and interactive web dashboard")
 	fmt.Println("  watch <path>          Watches directory for changes and live-updates index")
 	fmt.Println("  blame, knowledge      Analyzes git line ownership, team knowledge map & bus factor")
+	fmt.Println("  check                 Automated CI/CD architecture quality gate & rule enforcement")
 	fmt.Println("  runtime enable        Configures opt-in runtime instrumentation adapters")
 	fmt.Println("  version               Prints version information")
 	fmt.Println("\nRun 'codedna <command> --help' for details on a specific command.")
@@ -597,4 +600,96 @@ func runBlame(args []string) {
 			}
 		}
 	}
+}
+
+func runCheck(args []string) {
+	fs := flag.NewFlagSet("check", flag.ExitOnError)
+	target := fs.String("repo", ".", "Repository root path to evaluate")
+	maxCycles := fs.Int("max-cycles", 0, "Maximum allowed circular dependency cycles (0 = zero tolerance)")
+	minHealth := fs.Float64("min-health", 80.0, "Minimum allowed layer health score (0 - 100)")
+	maxViolations := fs.Int("max-violations", 0, "Maximum allowed layer boundary violations")
+	jsonOut := fs.Bool("json", false, "Output CI verification results as JSON")
+	fs.Parse(args)
+
+	st, err := getStore()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Store error: %v\n", err)
+		os.Exit(1)
+	}
+	defer st.Close()
+
+	resolvedRepo, err := scanner.ResolveTarget(*target)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Target error: %v\n", err)
+		os.Exit(1)
+	}
+
+	res, err := engine.Run(resolvedRepo, st, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Analysis error: %v\n", err)
+		os.Exit(1)
+	}
+
+	cyclesCount := 0
+	for _, iss := range res.Issues {
+		if iss.Kind == model.IssueCircularDep {
+			cyclesCount++
+		}
+	}
+
+	violationsCount := len(res.Architecture.Violations)
+	healthScore := res.Architecture.LayerHealthScore
+
+	passed := true
+	var failureReasons []string
+
+	if cyclesCount > *maxCycles {
+		passed = false
+		failureReasons = append(failureReasons, fmt.Sprintf("Circular dependencies (%d) exceed maximum allowed (%d)", cyclesCount, *maxCycles))
+	}
+	if violationsCount > *maxViolations {
+		passed = false
+		failureReasons = append(failureReasons, fmt.Sprintf("Layer boundary violations (%d) exceed maximum allowed (%d)", violationsCount, *maxViolations))
+	}
+	if healthScore < *minHealth {
+		passed = false
+		failureReasons = append(failureReasons, fmt.Sprintf("Layer health score (%.1f) is below threshold (%.1f)", healthScore, *minHealth))
+	}
+
+	if *jsonOut {
+		outMap := map[string]interface{}{
+			"passed":         passed,
+			"healthScore":    healthScore,
+			"minHealth":      *minHealth,
+			"cyclesCount":    cyclesCount,
+			"maxCycles":      *maxCycles,
+			"violations":     violationsCount,
+			"maxViolations":  *maxViolations,
+			"failureReasons": failureReasons,
+		}
+		b, _ := json.MarshalIndent(outMap, "", "  ")
+		fmt.Println(string(b))
+		if !passed {
+			os.Exit(1)
+		}
+		return
+	}
+
+	fmt.Println("==================================================")
+	fmt.Printf("  CodeDNA Architecture CI/CD Quality Gate\n")
+	fmt.Printf("  Repository: %s\n", resolvedRepo)
+	fmt.Println("==================================================")
+	fmt.Printf("Layer Health Score:      %.1f / 100 (Threshold: >= %.1f)\n", healthScore, *minHealth)
+	fmt.Printf("Circular Dependencies:   %d (Threshold: <= %d)\n", cyclesCount, *maxCycles)
+	fmt.Printf("Boundary Violations:     %d (Threshold: <= %d)\n", violationsCount, *maxViolations)
+
+	if !passed {
+		fmt.Println("\n❌ CI Quality Gate FAILED:")
+		for _, r := range failureReasons {
+			fmt.Printf("   • %s\n", r)
+		}
+		os.Exit(1)
+	}
+
+	fmt.Println("\n✔ CI Quality Gate PASSED: All architectural boundary guardrails respected.")
 }

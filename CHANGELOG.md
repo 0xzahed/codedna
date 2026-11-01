@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CI/CD Architecture Quality Gate (`codedna check`)**: Automated quality enforcement CLI command verifying layer health thresholds, circular dependency limits, and boundary violations with non-zero exit codes.
+- **Makefile Quality Gate Integration**: Added `make check` target to immediately validate architecture compliance across local environments and CI runners.
 - **Team Knowledge & Bus Factor Analysis Engine**: High-performance git history & numstat parser (`internal/blame/blame.go`) mapping line ownership per author and identifying single-contributor high-risk modules.
 - **CLI Blame Command**: Added `codedna blame [--repo <path>] [--json]` to inspect team knowledge distribution, author contributions, and bus factor health directly from the terminal.
 - **Knowledge Map REST Endpoint**: `GET /api/scans/:id/knowledge` (and `/api/scans/:id/blame`) providing contributor breakdown, line additions, and file primary ownership.

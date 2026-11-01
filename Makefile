@@ -40,6 +40,11 @@ lint:
 	@echo "==> Running go vet..."
 	go vet ./...
 
+## check: Run automated CI/CD architecture quality gate
+check: build-cli
+	@echo "==> Running CodeDNA Architecture Quality Gate..."
+	@./$(BIN_DIR)/$(BINARY_NAME) check --min-health=80 --max-cycles=0
+
 ## run: Start the local CodeDNA server daemon on port 8080
 run: build-cli
 	@echo "==> Launching CodeDNA daemon on http://localhost:8080..."

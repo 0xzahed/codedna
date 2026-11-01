@@ -113,10 +113,12 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - Added REST endpoint: `GET /api/scans/:id/knowledge` (and `/api/scans/:id/blame`).
   - Added CLI command: `codedna blame [--repo <path>] [--json]`.
   - Added Team Knowledge & Bus Factor Analysis dashboard card in `OverviewView.tsx`.
+- [x] **Task 5.3 — CI/CD Architecture Guard & Automated Quality Gate (`codedna check`):**
+  - Standalone quality gate CLI command `codedna check [--min-health=80] [--max-cycles=0] [--max-violations=0] [--json]`.
+  - Non-zero exit code on threshold failure with clear terminal diagnostics for failing builds.
+  - Added `make check` target in unified Makefile for automated CI/CD pipeline gating.
 - [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
   - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
-- [ ] **Task 5.3 — CI/CD GitHub Action for Architecture Enforcement:**
-  - Create reusable GitHub Action to fail PRs exceeding architectural layer thresholds or introducing cyclic dependencies.
 
 ---
 
