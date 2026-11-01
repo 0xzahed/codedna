@@ -204,6 +204,11 @@ export async function fetchDependencies(scanId: number = 1) {
   return res.json();
 }
 
+export async function fetchExportGraph(scanId: number = 1, format: 'mermaid' | 'c4' = 'mermaid'): Promise<{ format: string; content: string; repo: string }> {
+  const res = await fetch(`${API_BASE}/api/scans/${scanId}/export?format=${format}`);
+  return res.json();
+}
+
 export async function fetchImpact(scanId: number = 1, base: string = 'main'): Promise<ImpactReport> {
   const res = await fetch(`${API_BASE}/api/scans/${scanId}/impact?base=${encodeURIComponent(base)}`);
   return res.json();

@@ -59,9 +59,10 @@ This document tracks all features, bug fixes, performance optimizations, and arc
 ## 📌 Active & Upcoming Roadmap Tasks
 
 ### Milestone 3: Real-Time Collaboration & Advanced Visual Analytics (v2.2.0)
-- [ ] **Task 3.1 — Interactive Graph Export & Shareable Snapshots:**
-  - Export system architecture map as SVG / High-Res PNG.
-  - Export C4 / Mermaid diagram markdown.
+- [x] **Task 3.1 — Interactive Graph Export & Shareable Snapshots:**
+  - Export system architecture map as Mermaid.js flowchart (`flowchart TD`) and C4 Component diagrams.
+  - Added REST endpoint `GET /api/scans/:id/export?format=mermaid|c4`.
+  - Added Export Modal in Graph View with instant one-click copy and `.mmd`/`.c4` download.
 - [ ] **Task 3.2 — Custom Architectural Rules Editor in UI:**
   - Create and test custom architectural boundaries (e.g., `controllers cannot import models directly`) directly in the Settings/Arch UI.
 - [ ] **Task 3.3 — Real-Time Live Hot-Reloading Watcher:**

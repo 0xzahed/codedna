@@ -13,7 +13,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow';
 import { useAppStore } from '../../lib/store';
-import { fetchGraph, fetchWorkspaceGraph, GraphNode, GraphEdge } from '../../lib/api';
+import { fetchGraph, fetchWorkspaceGraph, fetchExportGraph, GraphNode, GraphEdge } from '../../lib/api';
 import { 
   Search, 
   Filter, 
@@ -23,7 +23,13 @@ import {
   GitFork,
   Flame,
   AlertTriangle,
-  ZoomIn
+  ZoomIn,
+  Download,
+  Copy,
+  Check,
+  X,
+  FileCode,
+  Share2
 } from 'lucide-react';
 
 export default function GraphView() {
@@ -36,6 +42,57 @@ export default function GraphView() {
   const [layoutMode, setLayoutMode] = useState<'grid' | 'hierarchical'>('hierarchical');
   const [highlightCycle, setHighlightCycle] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Diagram Export Modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'mermaid' | 'c4'>('mermaid');
+  const [exportCode, setExportCode] = useState('');
+  const [exportLoading, setExportLoading] = useState(false);
+  const [copiedExport, setCopiedExport] = useState(false);
+
+  const handleOpenExport = async () => {
+    setShowExportModal(true);
+    setExportLoading(true);
+    try {
+      const data = await fetchExportGraph(scanId, exportFormat);
+      setExportCode(data.content || '');
+    } catch (err) {
+      console.error(err);
+      setExportCode('// Failed to generate diagram export');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleFormatChange = async (fmt: 'mermaid' | 'c4') => {
+    setExportFormat(fmt);
+    setExportLoading(true);
+    try {
+      const data = await fetchExportGraph(scanId, fmt);
+      setExportCode(data.content || '');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleCopyExport = () => {
+    navigator.clipboard.writeText(exportCode);
+    setCopiedExport(true);
+    setTimeout(() => setCopiedExport(false), 2000);
+  };
+
+  const handleDownloadExport = () => {
+    const ext = exportFormat === 'mermaid' ? 'mmd' : 'c4';
+    const blob = new Blob([exportCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `architecture-${exportFormat}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Load graph data from API (either single-repo or multi-repo workspace)
   useEffect(() => {
@@ -281,6 +338,15 @@ export default function GraphView() {
           <div className="text-xs font-mono text-zinc-400 px-3 py-1 bg-charcoal-850 border border-charcoal-750 rounded-lg">
             Nodes: <span className="text-white font-semibold">{nodes.length}</span> | Edges: <span className="text-white font-semibold">{edges.length}</span>
           </div>
+
+          <button
+            onClick={handleOpenExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dna-blue/15 hover:bg-dna-blue/25 text-dna-blue border border-dna-blue/30 text-xs font-mono font-medium transition-all"
+            title="Export architecture diagram as Mermaid / C4"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export</span>
+          </button>
         </div>
       </div>
 
@@ -316,6 +382,86 @@ export default function GraphView() {
           </ReactFlowProvider>
         )}
       </div>
+
+      {/* Export Diagram Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="h-14 border-b border-charcoal-750 px-6 flex items-center justify-between shrink-0 bg-charcoal-850">
+              <div className="flex items-center gap-2.5 text-white font-mono font-bold text-sm">
+                <Share2 className="w-4 h-4 text-dna-blue" />
+                <span>Export Architecture Diagram</span>
+              </div>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Format Tabs & Toolbar */}
+            <div className="p-4 border-b border-charcoal-750 bg-charcoal-950 flex items-center justify-between gap-4">
+              <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
+                <button
+                  onClick={() => handleFormatChange('mermaid')}
+                  className={`px-3 py-1 rounded-md transition-all ${
+                    exportFormat === 'mermaid' ? 'bg-dna-blue text-white font-medium' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Mermaid.js Flowchart
+                </button>
+                <button
+                  onClick={() => handleFormatChange('c4')}
+                  className={`px-3 py-1 rounded-md transition-all ${
+                    exportFormat === 'c4' ? 'bg-dna-blue text-white font-medium' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  C4 Component Diagram
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopyExport}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-xs font-mono text-zinc-200 hover:text-white transition-all"
+                >
+                  {copiedExport ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedExport ? 'Copied!' : 'Copy Code'}</span>
+                </button>
+                <button
+                  onClick={handleDownloadExport}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dna-blue text-white hover:bg-dna-blue/90 text-xs font-mono font-medium transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download file</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Code Body */}
+            <div className="flex-1 overflow-auto p-4 bg-charcoal-950 font-mono text-xs select-text">
+              {exportLoading ? (
+                <div className="h-64 flex items-center justify-center text-zinc-500 gap-2">
+                  <div className="w-3.5 h-3.5 border-2 border-dna-blue border-t-transparent rounded-full animate-spin" />
+                  <span>Generating diagram specification...</span>
+                </div>
+              ) : (
+                <pre className="text-zinc-300 whitespace-pre leading-relaxed">
+                  {exportCode}
+                </pre>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t border-charcoal-750 bg-charcoal-850 px-6 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+              <span>Ready for GitHub README, Notion, Obsidian & Architecture Docs</span>
+              <span>Format: {exportFormat === 'mermaid' ? 'Mermaid Flowchart' : 'C4 Container'}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

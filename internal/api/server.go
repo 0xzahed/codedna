@@ -272,6 +272,8 @@ func (s *Server) handleScanSubroutes(w http.ResponseWriter, r *http.Request) {
 		s.handleScanRuntime(w, r, scanID)
 	case "report":
 		s.handleScanReport(w, r, scanID)
+	case "export":
+		s.handleScanExport(w, r, scanID)
 	default:
 		http.NotFound(w, r)
 	}
@@ -298,20 +300,62 @@ type fileConnection struct {
 }
 
 func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID int64) {
+	graph, err := s.buildGraphData(scanID, r)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, graph)
+}
+
+func (s *Server) handleScanExport(w http.ResponseWriter, r *http.Request, scanID int64) {
+	format := strings.ToLower(r.URL.Query().Get("format"))
+	if format == "" {
+		format = "mermaid"
+	}
+
+	repoRoot := s.repoRoot
+	if scanRoot, err := s.store.LoadRepoRootForScan(scanID); err == nil && scanRoot != "" {
+		repoRoot = scanRoot
+	}
+	repoName := filepath.Base(repoRoot)
+
+	graph, err := s.buildGraphData(scanID, r)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	switch format {
+	case "c4":
+		c4 := report.GenerateC4(repoName, graph)
+		writeJSON(w, http.StatusOK, map[string]string{
+			"format":  "c4",
+			"content": c4,
+			"repo":    repoName,
+		})
+	default:
+		mermaid := report.GenerateMermaid(repoName, graph)
+		writeJSON(w, http.StatusOK, map[string]string{
+			"format":  "mermaid",
+			"content": mermaid,
+			"repo":    repoName,
+		})
+	}
+}
+
+func (s *Server) buildGraphData(scanID int64, r *http.Request) (model.GraphData, error) {
 	files, err := s.store.LoadFiles(scanID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load files: "+err.Error())
-		return
+		return model.GraphData{}, fmt.Errorf("failed to load files: %w", err)
 	}
 	syms, err := s.store.LoadSymbols(scanID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load symbols: "+err.Error())
-		return
+		return model.GraphData{}, fmt.Errorf("failed to load symbols: %w", err)
 	}
 	rels, err := s.store.LoadRelationships(scanID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load relationships: "+err.Error())
-		return
+		return model.GraphData{}, fmt.Errorf("failed to load relationships: %w", err)
 	}
 
 	filterType := r.URL.Query().Get("type")
@@ -516,10 +560,10 @@ func (s *Server) handleScanGraph(w http.ResponseWriter, r *http.Request, scanID 
 		}
 	}
 
-	writeJSON(w, http.StatusOK, model.GraphData{
+	return model.GraphData{
 		Nodes: allNodes,
 		Edges: edges,
-	})
+	}, nil
 }
 
 func (s *Server) extractFastFileImports(
