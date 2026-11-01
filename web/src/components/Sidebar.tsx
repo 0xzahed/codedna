@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAppStore, NavTab } from '../lib/store';
 import { 
   LayoutDashboard, 
@@ -18,29 +20,31 @@ import {
 interface NavItem {
   id: NavTab;
   label: string;
+  href: string;
   icon: React.ElementType;
   badge?: string;
 }
 
 const navItems: NavItem[] = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'explorer', label: 'Repository Explorer', icon: FolderTree },
-  { id: 'graph', label: 'DNA Graph', icon: GitFork },
-  { id: 'deps', label: 'Dependencies', icon: Boxes },
-  { id: 'runtime', label: 'Runtime DNA', icon: Activity, badge: 'Live' },
-  { id: 'impact', label: 'Change Impact', icon: GitCommit },
-  { id: 'arch', label: 'Architecture Health', icon: ShieldCheck },
-  { id: 'ai', label: 'AI Assistant', icon: Sparkles },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'overview', label: 'Overview', href: '/overview', icon: LayoutDashboard },
+  { id: 'explorer', label: 'Repository Explorer', href: '/explorer', icon: FolderTree },
+  { id: 'graph', label: 'DNA Graph', href: '/graph', icon: GitFork },
+  { id: 'deps', label: 'Dependencies', href: '/dependencies', icon: Boxes },
+  { id: 'runtime', label: 'Runtime DNA', href: '/runtime', icon: Activity, badge: 'Live' },
+  { id: 'impact', label: 'Change Impact', href: '/impact', icon: GitCommit },
+  { id: 'arch', label: 'Architecture Health', href: '/architecture', icon: ShieldCheck },
+  { id: 'ai', label: 'AI Assistant', href: '/ai', icon: Sparkles },
+  { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export default function Sidebar() {
   const { activeTab, setActiveTab } = useAppStore();
+  const pathname = usePathname();
 
   return (
     <aside className="w-64 border-r border-charcoal-750 bg-charcoal-900 flex flex-col shrink-0 select-none">
       {/* Brand Header */}
-      <div className="h-16 border-b border-charcoal-750 px-5 flex items-center gap-3">
+      <Link href="/" className="h-16 border-b border-charcoal-750 px-5 flex items-center gap-3 hover:bg-charcoal-850/50 transition-colors">
         <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-dna-blue/20 to-dna-purple/20 border border-dna-blue/40 flex items-center justify-center text-dna-blue">
           <Dna className="w-5 h-5 animate-pulse" />
         </div>
@@ -50,7 +54,7 @@ export default function Sidebar() {
           </div>
           <div className="text-[11px] text-zinc-400">Software Intelligence</div>
         </div>
-      </div>
+      </Link>
 
       {/* Navigation Links */}
       <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
@@ -59,10 +63,18 @@ export default function Sidebar() {
         </div>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const isCurrentRoute = 
+            pathname === item.href || 
+            (pathname?.startsWith(item.href) && item.href !== '/') ||
+            (item.id === 'overview' && (pathname === '/' || pathname === '')) ||
+            (item.id === 'deps' && (pathname === '/deps' || pathname === '/deps/')) ||
+            (item.id === 'arch' && (pathname === '/arch' || pathname === '/arch/'));
+          const isActive = isCurrentRoute || activeTab === item.id;
+
           return (
-            <button
+            <Link
               key={item.id}
+              href={item.href}
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
                 isActive
@@ -79,7 +91,7 @@ export default function Sidebar() {
                   {item.badge}
                 </span>
               )}
-            </button>
+            </Link>
           );
         })}
       </nav>

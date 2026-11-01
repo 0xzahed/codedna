@@ -104,13 +104,44 @@ func (s *Server) registerRoutes() {
 				http.NotFound(w, r)
 				return
 			}
-			// Single page app: if file exists serve it, else serve index.html
-			f, err := s.webFS.Open(r.URL.Path)
-			if err == nil {
-				f.Close()
+
+			// Clean incoming path
+			cleanPath := r.URL.Path
+
+			// 1. Try path directly
+			if f, err := s.webFS.Open(cleanPath); err == nil {
+				defer f.Close()
+				if fi, err := f.Stat(); err == nil {
+					if !fi.IsDir() {
+						fileServer.ServeHTTP(w, r)
+						return
+					}
+					// If directory, check if it has index.html
+					if idxF, err := s.webFS.Open(filepath.Join(cleanPath, "index.html")); err == nil {
+						idxF.Close()
+						fileServer.ServeHTTP(w, r)
+						return
+					}
+				}
+			}
+
+			// 2. Try path + /index.html
+			if idxF, err := s.webFS.Open(filepath.Join(cleanPath, "index.html")); err == nil {
+				idxF.Close()
+				r.URL.Path = filepath.Join(cleanPath, "index.html")
 				fileServer.ServeHTTP(w, r)
 				return
 			}
+
+			// 3. Try path + .html
+			if htmlF, err := s.webFS.Open(cleanPath + ".html"); err == nil {
+				htmlF.Close()
+				r.URL.Path = cleanPath + ".html"
+				fileServer.ServeHTTP(w, r)
+				return
+			}
+
+			// 4. SPA fallback: serve root index.html
 			r.URL.Path = "/"
 			fileServer.ServeHTTP(w, r)
 		})
