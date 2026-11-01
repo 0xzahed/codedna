@@ -58,16 +58,40 @@ This document tracks all features, bug fixes, performance optimizations, and arc
 
 ## 📌 Active & Upcoming Roadmap Tasks
 
-### Milestone 3: Real-Time Collaboration & Advanced Visual Analytics (v2.2.0)
+### Milestone 3: Real-Time Visual Analytics & Documentation Excellence (v2.2.0)
 - [x] **Task 3.1 — Interactive Graph Export & Shareable Snapshots:**
   - Export system architecture map as Mermaid.js flowchart (`flowchart TD`) and C4 Component diagrams.
   - Added REST endpoint `GET /api/scans/:id/export?format=mermaid|c4`.
   - Added Export Modal in Graph View with instant one-click copy and `.mmd`/`.c4` download.
-- [ ] **Task 3.2 — Custom Architectural Rules Editor in UI:**
-  - Create and test custom architectural boundaries (e.g., `controllers cannot import models directly`) directly in the Settings/Arch UI.
-- [ ] **Task 3.3 — Real-Time Live Hot-Reloading Watcher:**
+  - *Commit:* `3c1b28b` (`feat(graph): add Mermaid diagram and C4 architecture export engine with UI snapshot modal`)
+
+- [x] **Task 3.2 — Production Build Automation & Developer Experience:**
+  - Unified `Makefile` supporting `build-cli`, `build-web`, `test`, `test-race`, `lint`, `clean`, and `run`.
+  - Clean binary outputs and automated Go compiler flag optimization (`-ldflags="-s -w"`).
+  - *Commit:* `23dd560` (`build: add production Makefile for unified Go CLI and Next.js dashboard lifecycle`)
+
+- [x] **Task 3.3 — World-Class Ventox-Styled Documentation Overhaul:**
+  - Full redesign of `README.md` following [0xzahed/ventox](https://github.com/0xzahed/ventox) aesthetic and structure.
+  - Glowing shields.io badges (Go, TS, React Flow, SQLite, License, Release, Privacy-first).
+  - Visual Mermaid System Architecture dataflow diagram.
+  - Comprehensive feature comparison matrix (CodeDNA vs Sourcegraph, SonarQube, CodeSee).
+  - Terminal ASCII execution preview with step-by-step progress ribbons.
+  - Complete CLI command & flags matrix for all 8 CLI workflows.
+  - Deep walkthrough of the 9 specialized Web Intelligence Dashboard views.
+  - Real-world 22x parallel throughput benchmarks and hardware memory metrics.
+  - Synchronized `CONTRIBUTING.md`, `SECURITY.md`, and version bumped to `2.2.0`.
+  - *Commits:* `4130bf9`, `429afcc`, `45131fc`, `7a2e512`, `8a505c1`, `28418ef`, `60389a5`, `be6b9bd`
+
+---
+
+## 📌 Active & Upcoming Roadmap Tasks
+
+### Milestone 4: Real-Time Live Watcher & AI Architecture Refactoring (v2.3.0)
+- [ ] **Task 4.1 — Real-Time Live Hot-Reloading Watcher:**
   - Automatically re-parse modified files incrementally and push live delta updates over SSE without full re-scan.
-- [ ] **Task 3.4 — AI-Powered Architecture Refactoring Suggestions:**
+- [ ] **Task 4.2 — Custom Architectural Rules Editor in UI:**
+  - Create and test custom architectural boundaries (e.g., `controllers cannot import models directly`) directly in the Settings/Arch UI.
+- [ ] **Task 4.3 — AI-Powered Architecture Refactoring Suggestions:**
   - Use Ollama / Local LLM to suggest refactoring steps for detected circular dependencies and layer violations.
 
 ---

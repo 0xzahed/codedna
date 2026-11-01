@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-11-01
+
+### Added
+- **Mermaid.js Flowchart & C4 Component Exporter**: Instant one-click export and download of system architecture topology as Mermaid (`flowchart TD`) and C4 Component diagrams (`GET /api/scans/:id/export`).
+- **Graph Snapshot Modal**: Visual UI modal in React Flow canvas to preview, copy to clipboard, or save `.mmd` and `.c4` diagram specifications.
+- **Production Build Automation (`Makefile`)**: Unified lifecycle targets (`build-cli`, `build-web`, `test-race`, `lint`, `clean`, `run`).
+- **Ventox-Quality Documentation**: Complete architectural overhaul of `README.md` inspired by the world-class presentation of [0xzahed/ventox](https://github.com/0xzahed/ventox).
+
+### Documentation
+- **Mermaid System Architecture Flowchart**: End-to-end dataflow visualization from multi-language files to 16-worker AST pool, SQLite store, and React Flow UI.
+- **Competitive Feature Comparison Matrix**: Detailed side-by-side comparison of CodeDNA vs Sourcegraph, SonarQube, and CodeSee.
+- **Comprehensive CLI Reference & Flags Matrix**: Complete command manual covering `scan`, `analyze`, `graph`, `impact`, `report`, `serve`, `watch`, and `runtime`.
+- **9-View Web Dashboard Walkthrough**: Exhaustive guides for Overview, Living Graph, Repo Explorer, Dependencies, Runtime Timeline, Impact Blast Radius, Architectural Guardrails, AI Assistant, and Multi-Repo Settings.
+- **Parallel Parsing Performance Benchmarks**: Real-world benchmarks demonstrating 22x speedup and sub-45MB memory footprint.
+
 ## [2.1.0] - 2026-11-01
 
 ### Added
