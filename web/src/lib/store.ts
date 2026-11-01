@@ -6,6 +6,7 @@ export type NavTab =
   | 'explorer'
   | 'graph'
   | 'deps'
+  | 'design'
   | 'runtime'
   | 'impact'
   | 'arch'
