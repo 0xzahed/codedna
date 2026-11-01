@@ -4,9 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.4.0] - 2026-11-02
 
 ### Added
+- **System Design & Multi-Tier Architecture Topology Engine**: Automated structural tier classification (`internal/sysdesign`) categorizing files and symbols across 6 architectural tiers (Client & Gateway, API Presentation, Domain Services, Persistence Storage, Async Messaging, External Integrations).
+- **Cross-Tier Protocol Data Flow Pipeline**: Reconstructed end-to-end data flow hops with protocol identification (`HTTPS / REST API`, `In-Memory Orchestration`, `SQL / Storage Interface`, `Async Event / Channel Pipeline`) and call count metrics.
+- **Software Design Pattern Recognition Gallery**: Discovers classic Gang of Four and distributed architectural patterns with confidence scoring, code evidence, and trade-offs (Clean Architecture/Ports & Adapters, Repository/Data Mapper, Factory/Builder, Singleton, Event-Driven/Pub-Sub, Chain of Responsibility/Middleware, CQRS).
+- **Interactive System Design Web View (`/design`)**: Dedicated 10th Core Intelligence View featuring an interactive tier topology grid, component inspection drawer, expandable data flow hops, filterable pattern gallery, and architectural bottleneck diagnostics.
+- **CLI System Design Command (`codedna design`)**: Terminal command rendering formatted ASCII multi-tier topologies, protocol data flow ribbons, pattern discoveries, and bottleneck alerts with optional `--json` export.
+- **System Design REST Endpoints**: `GET /api/scans/:id/system-design` for comprehensive architectural reports and `GET /api/scans/:id/patterns` for quick pattern queries.
+- **Overview Dashboard Architecture Card**: Integrated System Design summary section on the main Overview view with direct navigation to the topology canvas.
 - **CI/CD Architecture Quality Gate (`codedna check`)**: Automated quality enforcement CLI command verifying layer health thresholds, circular dependency limits, and boundary violations with non-zero exit codes.
 - **Makefile Quality Gate Integration**: Added `make check` target to immediately validate architecture compliance across local environments and CI runners.
 - **Team Knowledge & Bus Factor Analysis Engine**: High-performance git history & numstat parser (`internal/blame/blame.go`) mapping line ownership per author and identifying single-contributor high-risk modules.
