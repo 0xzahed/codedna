@@ -127,6 +127,26 @@ export interface ArchReport {
   rules?: ArchRule[];
 }
 
+export interface RefactoringProposal {
+  id: string;
+  issueType: 'circular-dependency' | 'layer-violation';
+  target: string;
+  severity: 'info' | 'low' | 'medium' | 'high';
+  decouplingSteps: string[];
+  pattern: string;
+  proposedFix: string;
+  explanation: string;
+}
+
+export interface RefactorReport {
+  scanId: number;
+  layerHealthScore: number;
+  ruleCount: number;
+  circularCount: number;
+  proposals: RefactoringProposal[];
+  totalProposals: number;
+}
+
 export interface RuntimeSummary {
   totalEvents: number;
   uniqueFunctions: number;
@@ -258,6 +278,14 @@ export async function resetArchRules(scanId: number = 1): Promise<ArchReport> {
   });
   if (!res.ok) {
     throw new Error('Failed to reset architectural rules');
+  }
+  return res.json();
+}
+
+export async function fetchRefactorProposals(scanId: number = 1): Promise<RefactorReport> {
+  const res = await fetch(`${API_BASE}/api/scans/${scanId}/refactor`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch architectural refactoring proposals');
   }
   return res.json();
 }

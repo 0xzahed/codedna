@@ -286,6 +286,8 @@ func (s *Server) handleScanSubroutes(w http.ResponseWriter, r *http.Request) {
 		s.handleScanReport(w, r, scanID)
 	case "export":
 		s.handleScanExport(w, r, scanID)
+	case "refactor":
+		s.handleScanRefactor(w, r, scanID)
 	default:
 		http.NotFound(w, r)
 	}
@@ -906,6 +908,41 @@ func (s *Server) handleScanArchitecture(w http.ResponseWriter, r *http.Request, 
 
 	report := architecture.CheckArchitecture(rules, rels, syms, cycles)
 	writeJSON(w, http.StatusOK, report)
+}
+
+func (s *Server) handleScanRefactor(w http.ResponseWriter, r *http.Request, scanID int64) {
+	repoRoot := s.repoRoot
+	if scanRoot, err := s.store.LoadRepoRootForScan(scanID); err == nil && scanRoot != "" {
+		repoRoot = scanRoot
+	}
+
+	rules, err := architecture.LoadRules(repoRoot)
+	if err != nil {
+		rules = architecture.DefaultRules()
+	}
+
+	syms, _ := s.store.LoadSymbols(scanID)
+	rels, _ := s.store.LoadRelationships(scanID)
+	issues, _ := s.store.LoadIssues(scanID)
+
+	var cycles []model.Issue
+	for _, iss := range issues {
+		if iss.Kind == model.IssueCircularDep {
+			cycles = append(cycles, iss)
+		}
+	}
+
+	report := architecture.CheckArchitecture(rules, rels, syms, cycles)
+	proposals := s.aiClient.SuggestRefactoring(r.Context(), report, syms)
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"scanId":           scanID,
+		"layerHealthScore": report.LayerHealthScore,
+		"ruleCount":        report.RuleCount,
+		"circularCount":    report.CircularCount,
+		"proposals":        proposals,
+		"totalProposals":   len(proposals),
+	})
 }
 
 func (s *Server) handleRuntimeEvents(w http.ResponseWriter, r *http.Request) {

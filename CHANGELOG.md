@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **AI Architecture Refactoring Advisor**: Automated architectural decoupling proposal engine (`GET /api/scans/:id/refactor`) generating concrete decoupling plans, step-by-step checklists, and code blueprints for cyclic dependencies and layer boundary violations.
+- **Interactive Refactoring UI**: Integrated Advisor panel in Architecture View with pattern blueprints (Dependency Inversion, Ports & Adapters, Shared Contracts) and one-click blueprint copying.
 - **Real-Time Live Watcher & Incremental Re-Indexing**: Background directory file watcher that filters code-file modifications, triggers synchronized background re-indexing, and streams rich SSE events (`files_changed`).
 - **Reactive Web Live-Reload**: Persistent SSE connection in the web dashboard with instant notification pill (`⚡ Live: X file(s) re-indexed`) and reactive canvas/overview re-render without page refresh.
 - **Custom Architectural Rule Builder**: Interactive UI and REST API to create, customize, and enforce architectural boundary rules (e.g. `Domain ↛ Controllers`, `Controllers ↛ Store`) directly from the Web Dashboard.

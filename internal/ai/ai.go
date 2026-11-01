@@ -419,3 +419,88 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// SuggestRefactoring generates actionable architectural refactoring proposals for detected circular dependencies and layer violations.
+func (c *Client) SuggestRefactoring(ctx context.Context, report model.ArchHealthReport, syms []model.Symbol) []model.RefactoringProposal {
+	var proposals []model.RefactoringProposal
+
+	// 1. Propose decoupling for Circular Dependencies
+	for i, cycle := range report.Cycles {
+		propID := fmt.Sprintf("refactor-cycle-%d", i+1)
+		targetStr := cycle.Chain
+		if targetStr == "" && len(cycle.Files) > 0 {
+			targetStr = strings.Join(cycle.Files, " ➔ ")
+		}
+
+		steps := []string{
+			"Step 1: Extract shared data structures or domain interfaces into an independent package (e.g., `common/` or `types/`).",
+			"Step 2: Apply Dependency Inversion: make dependent modules depend on abstractions/interfaces rather than concrete implementations.",
+			"Step 3: If bidirectional communication is mandatory, introduce an Event Emitter or Callback delegate pattern.",
+			"Step 4: Update imports and verify cycle resolution with `codedna analyze`.",
+		}
+
+		fixPattern := "Dependency Inversion (DIP) & Shared Interface Extraction"
+		fixCode := `// Before (Tight Bidirectional Coupling):
+// package A imports B; package B imports A
+
+// Refactored Solution (Inversion):
+// Create package 'contracts' or 'types':
+package contracts
+
+type DataProvider interface {
+    FetchData() ([]byte, error)
+}
+// Both Package A and Package B import contracts without depending directly on each other.`
+
+		explanation := fmt.Sprintf("Circular dependency detected involving %d files (%s). Cycles create tight coupling, break separate compilation, and complicate unit testing.", len(cycle.Files), targetStr)
+
+		proposals = append(proposals, model.RefactoringProposal{
+			ID:              propID,
+			IssueType:       "circular-dependency",
+			Target:          targetStr,
+			Severity:        model.SevHigh,
+			DecouplingSteps: steps,
+			Pattern:         fixPattern,
+			ProposedFix:     fixCode,
+			Explanation:     explanation,
+		})
+	}
+
+	// 2. Propose decoupling for Layer Boundary Violations
+	for i, v := range report.Violations {
+		propID := fmt.Sprintf("refactor-violation-%d", i+1)
+		targetStr := fmt.Sprintf("%s ↛ %s", v.FromFile, v.ToFile)
+
+		steps := []string{
+			fmt.Sprintf("Step 1: Eliminate the direct dependency from '%s' to '%s'.", v.FromFile, v.ToFile),
+			"Step 2: Introduce an intermediary Service layer or Ports & Adapters boundary.",
+			"Step 3: Define an interface at the calling layer that the target layer implements (Dependency Inversion).",
+			"Step 4: Pass the implementation via constructor injection at application initialization.",
+		}
+
+		fixPattern := "Ports & Adapters (Hexagonal Architecture) / Service Layer"
+		fixCode := fmt.Sprintf(`// Avoid direct illegal cross-layer dependency:
+// In %s:
+type Service interface {
+    Process(ctx context.Context) error
+}
+
+// In application wiring:
+// Inject adapter implementation fulfilling the interface without leaking presentation or storage internals.`, v.FromFile)
+
+		explanation := fmt.Sprintf("Rule violation '%s': %s. Violating layer boundaries causes architectural drift and prevents modular scaling.", v.RuleName, v.Reason)
+
+		proposals = append(proposals, model.RefactoringProposal{
+			ID:              propID,
+			IssueType:       "layer-violation",
+			Target:          targetStr,
+			Severity:        v.Severity,
+			DecouplingSteps: steps,
+			Pattern:         fixPattern,
+			ProposedFix:     fixCode,
+			Explanation:     explanation,
+		})
+	}
+
+	return proposals
+}

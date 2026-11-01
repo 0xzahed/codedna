@@ -140,3 +140,49 @@ func TestMapBusinessLogic(t *testing.T) {
 		t.Errorf("Expected Auth and Payment modules, got: %+v", modules)
 	}
 }
+
+func TestSuggestRefactoring(t *testing.T) {
+	client := NewClient(Config{Provider: "offline"})
+
+	report := model.ArchHealthReport{
+		Cycles: []model.CycleDetail{
+			{
+				Files: []string{"account/models.py", "auth/service.py", "account/models.py"},
+				Chain: "account/models.py ➔ auth/service.py ➔ account/models.py",
+			},
+		},
+		Violations: []model.ArchViolation{
+			{
+				RuleID:   "rule-domain-clean",
+				RuleName: "Domain Isolation",
+				FromFile: "domain/user.go",
+				ToFile:   "controllers/http.go",
+				Severity: model.SevHigh,
+				Reason:   "Domain must not depend on HTTP controllers",
+			},
+		},
+	}
+
+	proposals := client.SuggestRefactoring(context.Background(), report, nil)
+	if len(proposals) != 2 {
+		t.Fatalf("Expected 2 refactoring proposals, got %d", len(proposals))
+	}
+
+	// Verify cycle proposal
+	cycleProp := proposals[0]
+	if cycleProp.IssueType != "circular-dependency" {
+		t.Errorf("Expected circular-dependency issue type, got %s", cycleProp.IssueType)
+	}
+	if len(cycleProp.DecouplingSteps) == 0 {
+		t.Errorf("Expected decoupling steps for cycle")
+	}
+
+	// Verify violation proposal
+	violationProp := proposals[1]
+	if violationProp.IssueType != "layer-violation" {
+		t.Errorf("Expected layer-violation issue type, got %s", violationProp.IssueType)
+	}
+	if len(violationProp.DecouplingSteps) == 0 {
+		t.Errorf("Expected decoupling steps for violation")
+	}
+}

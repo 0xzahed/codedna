@@ -425,3 +425,15 @@ type APICallSite struct {
 	Line     int    `json:"line"`
 }
 
+// RefactoringProposal outlines concrete decoupling steps for architectural violations and cycles.
+type RefactoringProposal struct {
+	ID              string   `json:"id"`
+	IssueType       string   `json:"issueType"` // "circular-dependency", "layer-violation"
+	Target          string   `json:"target"`
+	Severity        Severity `json:"severity"`
+	DecouplingSteps []string `json:"decouplingSteps"`
+	Pattern         string   `json:"pattern"` // e.g. "Dependency Inversion", "Shared Abstraction", "Service Orchestration"
+	ProposedFix     string   `json:"proposedFix"`
+	Explanation     string   `json:"explanation"`
+}
+

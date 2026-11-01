@@ -97,8 +97,22 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - Added REST endpoints: `GET /api/scans/:id/architecture`, `POST /api/scans/:id/architecture/rules`, `DELETE /api/scans/:id/architecture/rules/:ruleId`, `POST /api/scans/:id/architecture/rules/reset`.
   - Interactive Rule Builder in `ArchitectureView.tsx` with presets (Clean Architecture, Domain Isolation, UI Purity), glob patterns, and live re-scoring.
   - Visualized Tarjan SCC circular dependency clusters and layer health penalty impact.
-- [ ] **Task 4.3 — AI-Powered Architecture Refactoring Suggestions:**
-  - Use Ollama / Local LLM to suggest refactoring steps for detected circular dependencies and layer violations.
+- [x] **Task 4.3 — AI-Powered Architecture Refactoring Suggestions:**
+  - Automated refactoring synthesis engine (`internal/ai/SuggestRefactoring`) proposing concrete decoupling steps for circular dependencies and layer violations.
+  - Added REST endpoint: `GET /api/scans/:id/refactor` returning structured decoupling plans with architectural pattern blueprints.
+  - Integrated "AI Decoupling Advisor" in `ArchitectureView.tsx` with pattern blueprints, step-by-step checklists, and one-click code copying.
+
+---
+
+## 📌 Active & Upcoming Roadmap Tasks
+
+### Milestone 5: Deep Intelligence & Multi-Language Evolution (v2.4.0)
+- [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
+  - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
+- [ ] **Task 5.2 — Git Blame & Author Knowledge Map:**
+  - Integrate git blame analysis to calculate author knowledge distribution and bus factor metrics per module.
+- [ ] **Task 5.3 — CI/CD GitHub Action for Architecture Enforcement:**
+  - Create reusable GitHub Action to fail PRs exceeding architectural layer thresholds or introducing cyclic dependencies.
 
 ---
 

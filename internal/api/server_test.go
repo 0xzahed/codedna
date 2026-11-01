@@ -285,3 +285,32 @@ func TestServerWatcherReindexing(t *testing.T) {
 		}
 	}
 }
+
+func TestScanRefactorEndpoint(t *testing.T) {
+	srv, _, st := setupTestServer(t)
+	defer st.Close()
+
+	// Initial scan
+	scanReq := httptest.NewRequest("POST", "/api/repos/scan", bytes.NewReader([]byte("{}")))
+	wInit := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wInit, scanReq)
+	if wInit.Code != http.StatusOK {
+		t.Fatalf("Scan failed: %d %s", wInit.Code, wInit.Body.String())
+	}
+
+	// Query refactor proposals
+	refReq := httptest.NewRequest("GET", "/api/scans/1/refactor", nil)
+	wRef := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wRef, refReq)
+	if wRef.Code != http.StatusOK {
+		t.Fatalf("GET /refactor failed: %d %s", wRef.Code, wRef.Body.String())
+	}
+
+	var res map[string]interface{}
+	if err := json.NewDecoder(wRef.Body).Decode(&res); err != nil {
+		t.Fatalf("Failed to decode refactor response: %v", err)
+	}
+	if res["scanId"] == nil {
+		t.Errorf("Expected scanId in response")
+	}
+}

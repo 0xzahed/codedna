@@ -7,8 +7,10 @@ import {
   addArchRule, 
   deleteArchRule, 
   resetArchRules, 
+  fetchRefactorProposals,
   ArchReport, 
-  ArchRule 
+  ArchRule,
+  RefactoringProposal
 } from '../../lib/api';
 import { 
   ShieldCheck, 
@@ -25,15 +27,21 @@ import {
   Ban, 
   Sparkles,
   RefreshCw,
-  Info
+  Info,
+  Copy,
+  Check,
+  Code2
 } from 'lucide-react';
 
 export default function ArchitectureView() {
-  const { scanId, setSelectedNode } = useAppStore();
+  const { scanId, setSelectedNode, refreshKey } = useAppStore();
   const [arch, setArch] = useState<ArchReport | null>(null);
+  const [proposals, setProposals] = useState<RefactoringProposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAdvisor, setShowAdvisor] = useState(false);
+  const [copiedPropId, setCopiedPropId] = useState<string | null>(null);
 
   // New Rule Form State
   const [name, setName] = useState('');
@@ -46,15 +54,23 @@ export default function ArchitectureView() {
 
   const loadData = () => {
     setLoading(true);
-    fetchArchitecture(scanId)
-      .then((data) => setArch(data))
+    Promise.all([
+      fetchArchitecture(scanId),
+      fetchRefactorProposals(scanId).catch(() => ({ proposals: [] })),
+    ])
+      .then(([archData, refData]) => {
+        setArch(archData);
+        if (refData && Array.isArray((refData as any).proposals)) {
+          setProposals((refData as any).proposals);
+        }
+      })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     loadData();
-  }, [scanId]);
+  }, [scanId, refreshKey]);
 
   const handleApplyPreset = (preset: {
     name: string;
@@ -101,6 +117,8 @@ export default function ArchitectureView() {
       setFromPattern('');
       setToPattern('');
       setDescription('');
+      // Reload proposals
+      fetchRefactorProposals(scanId).then((r) => setProposals(r.proposals || [])).catch(() => {});
     } catch (err: any) {
       setFormError(err.message || 'Failed to save rule');
     } finally {
@@ -114,6 +132,7 @@ export default function ArchitectureView() {
       setActionLoading(true);
       const updated = await deleteArchRule(scanId, ruleId);
       setArch(updated);
+      fetchRefactorProposals(scanId).then((r) => setProposals(r.proposals || [])).catch(() => {});
     } catch (err) {
       console.error(err);
     } finally {
@@ -127,11 +146,18 @@ export default function ArchitectureView() {
       setActionLoading(true);
       const updated = await resetArchRules(scanId);
       setArch(updated);
+      fetchRefactorProposals(scanId).then((r) => setProposals(r.proposals || [])).catch(() => {});
     } catch (err) {
       console.error(err);
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleCopyCode = (id: string, code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedPropId(id);
+    setTimeout(() => setCopiedPropId(null), 2000);
   };
 
   return (
@@ -149,6 +175,23 @@ export default function ArchitectureView() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAdvisor(!showAdvisor)}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg border transition-all ${
+              showAdvisor
+                ? 'bg-purple-600/20 text-purple-300 border-purple-500/50 shadow-sm'
+                : 'text-zinc-300 hover:text-white bg-charcoal-850 hover:bg-charcoal-750 border-charcoal-750'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-dna-purple" />
+            <span>AI Refactoring Advisor</span>
+            {proposals.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                {proposals.length}
+              </span>
+            )}
+          </button>
+
           <button
             onClick={handleResetRules}
             disabled={actionLoading || loading}
@@ -211,6 +254,117 @@ export default function ArchitectureView() {
           </p>
         </div>
       </div>
+
+      {/* AI Refactoring Advisor Drawer / Section */}
+      {showAdvisor && (
+        <div className="bg-gradient-to-b from-purple-950/20 to-charcoal-850 border border-purple-500/40 rounded-xl p-6 space-y-6 font-mono animate-in fade-in duration-150">
+          <div className="flex items-center justify-between border-b border-purple-500/20 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/20 border border-purple-500/40 rounded-lg">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">AI Architecture Decoupling Advisor</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Actionable step-by-step refactoring proposals grounded in static AST call chains and clean architecture patterns.
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded bg-purple-500/10 text-purple-300 border border-purple-500/30">
+              {proposals.length} decoupling plan(s)
+            </span>
+          </div>
+
+          {proposals.length > 0 ? (
+            <div className="space-y-6">
+              {proposals.map((prop) => (
+                <div
+                  key={prop.id}
+                  className="bg-charcoal-900 border border-charcoal-750 hover:border-purple-500/40 rounded-xl p-5 space-y-4 transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-charcoal-800 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded font-mono uppercase font-bold ${
+                          prop.issueType === 'circular-dependency'
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                        }`}
+                      >
+                        {prop.issueType === 'circular-dependency' ? 'Circular Dependency' : 'Layer Violation'}
+                      </span>
+                      <span className="text-xs font-bold text-white truncate max-w-md">{prop.target}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-dna-cyan bg-dna-cyan/10 px-2 py-0.5 rounded border border-dna-cyan/20">
+                        {prop.pattern}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-zinc-300 leading-relaxed font-sans">{prop.explanation}</p>
+
+                  {/* Decoupling Checklist */}
+                  <div className="space-y-2 bg-charcoal-950 p-4 rounded-lg border border-charcoal-800">
+                    <div className="text-[11px] font-bold text-white flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5 text-dna-blue" />
+                      <span>Recommended Decoupling Steps:</span>
+                    </div>
+                    <ul className="space-y-1.5 pl-2 text-xs text-zinc-300 font-sans">
+                      {prop.decouplingSteps.map((step, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-dna-blue font-mono font-bold mt-0.5">✓</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Proposed Pattern Code */}
+                  {prop.proposedFix && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                        <span className="flex items-center gap-1.5 font-sans">
+                          <Code2 className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Architectural Decoupling Blueprint:</span>
+                        </span>
+                        <button
+                          onClick={() => handleCopyCode(prop.id, prop.proposedFix)}
+                          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-charcoal-800 transition-colors"
+                        >
+                          {copiedPropId === prop.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400 text-[10px]">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="text-[10px]">Copy Blueprint</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <pre className="bg-charcoal-950 p-4 rounded-lg border border-charcoal-800 text-xs text-zinc-300 font-mono overflow-x-auto whitespace-pre leading-relaxed">
+                        {prop.proposedFix}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center space-y-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+              <p className="text-xs text-white">System Architecture is Decoupled</p>
+              <p className="text-[11px] text-zinc-400 max-w-md mx-auto font-sans">
+                No active layer violations or circular import chains detected. All modules conform to defined boundary rules.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Circular Dependencies Section (if any) */}
       {arch?.cycles && arch.cycles.length > 0 && (
@@ -378,7 +532,7 @@ export default function ArchitectureView() {
                       desc: 'Domain business logic must never import web presentation controllers',
                     })
                   }
-                  className="px-2.5 py-1 text-[11px] bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 rounded text-zinc-300"
+                  className="px-2.5 py-1 text-[11px] bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-750 rounded text-zinc-300"
                 >
                   Domain ↛ Controllers
                 </button>
@@ -393,7 +547,7 @@ export default function ArchitectureView() {
                       desc: 'Controllers must communicate through service layer rather than raw storage',
                     })
                   }
-                  className="px-2.5 py-1 text-[11px] bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 rounded text-zinc-300"
+                  className="px-2.5 py-1 text-[11px] bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-750 rounded text-zinc-300"
                 >
                   Controllers ↛ Store
                 </button>
@@ -408,7 +562,7 @@ export default function ArchitectureView() {
                       desc: 'Frontend UI components must never access database or persistence layer directly',
                     })
                   }
-                  className="px-2.5 py-1 text-[11px] bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 rounded text-zinc-300"
+                  className="px-2.5 py-1 text-[11px] bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-750 rounded text-zinc-300"
                 >
                   Components ↛ DB
                 </button>
