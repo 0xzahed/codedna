@@ -126,6 +126,12 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - REST endpoints: `GET /api/scans/:id/system-design` and `GET /api/scans/:id/patterns`.
   - Dedicated 10th Core Intelligence View: `SystemDesignView.tsx` (`/design`) with interactive tier inspection, hop flow pipeline, and filterable pattern recognition gallery.
   - Overview dashboard summary card with direct navigation link.
+- [x] **Task 5.5 — System Design Deep Optimization Engine & Interactive Architecture Graph:**
+  - Extended pattern recognition engine with Strategy/Policy, Adapter/Facade, Observer/Listener, and Resilience/Circuit Breaker patterns.
+  - Concrete Actionable Architectural Recommendations engine (`ArchRecommendation`: Decoupling, Caching, Scalability, Modularity) with specific implementation steps and architectural payoff metrics.
+  - Terminal CLI (`codedna design`) printing structured optimization recommendations, severity ratings, and impact summaries.
+  - Enhanced React Flow Architecture Graph with in-graph component search, match glow effects, and multi-protocol edge filtering (HTTPS, In-Memory, SQL/Storage, Async Event).
+  - Interactive Architectural Optimization Engine in web dashboard with category/severity filters, tracking checklists, and impact analysis.
 - [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
   - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
 
