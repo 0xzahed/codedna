@@ -62,7 +62,7 @@ jobs:
       matrix:
         target:
           - { os: linux, arch: amd64, runner: ubuntu-latest, ext: "" }
-          - { os: darwin, arch: amd64, runner: macos-13, ext: "" }
+          - { os: darwin, arch: amd64, runner: macos-latest, ext: "" }
           - { os: darwin, arch: arm64, runner: macos-latest, ext: "" }
           - { os: windows, arch: amd64, runner: windows-latest, ext: ".exe" }
     steps:
@@ -108,6 +108,10 @@ jobs:
           CGO_ENABLED: 1
         run: |
           mkdir -p dist/bin
+          if [ "${{ matrix.target.os }}" = "darwin" ] && [ "${{ matrix.target.arch }}" = "amd64" ]; then
+            export CGO_CFLAGS="-arch x86_64"
+            export CGO_LDFLAGS="-arch x86_64"
+          fi
           go build -ldflags="-s -w" -o "dist/bin/codedna${{ matrix.target.ext }}" ./cmd/codedna
 
       - name: Package Release Bundle
