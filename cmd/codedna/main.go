@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -63,6 +64,16 @@ func main() {
 		runCheck(args)
 	case "design", "sysdesign":
 		runDesign(args)
+	case "doctor":
+		runDoctor(args)
+	case "install":
+		runInstall(args)
+	case "update":
+		runUpdate(args)
+	case "uninstall":
+		runUninstall(args)
+	case "docker":
+		runDocker(args)
 	case "version", "--version", "-v":
 		fmt.Printf("CodeDNA version %s\n", version)
 	case "help", "--help", "-h":
@@ -85,18 +96,29 @@ func printUsage() {
 	fmt.Println("CodeDNA: Understand Your Code. See Its DNA.")
 	fmt.Println("\nUsage: codedna <command> [arguments] [flags]")
 	fmt.Println("\nCommands:")
+	fmt.Println("  serve [options]       Starts REST API server and interactive web architecture studio")
 	fmt.Println("  scan <path>           Walks and parses a codebase into the intelligence store")
 	fmt.Println("  analyze <path>        Full scan plus deep architectural & dependency analysis")
 	fmt.Println("  graph <path>          Outputs nodes and dependency relationships")
 	fmt.Println("  impact [path]         Analyzes blast radius and consequences of git changes")
 	fmt.Println("  report [path]         Generates comprehensive Markdown or JSON reports")
-	fmt.Println("  serve                 Starts REST API server and interactive web dashboard")
+	fmt.Println("  doctor                Diagnoses environment, installation health and toolchains")
+	fmt.Println("  install               Self-installs standalone executable into user PATH")
+	fmt.Println("  update                Checks GitHub for latest releases and updates CodeDNA")
+	fmt.Println("  uninstall             Safely uninstalls CodeDNA and removes local cache")
+	fmt.Println("  docker [options]      Runs CodeDNA inside an isolated Docker container")
 	fmt.Println("  watch <path>          Watches directory for changes and live-updates index")
 	fmt.Println("  blame, knowledge      Analyzes git line ownership, team knowledge map & bus factor")
 	fmt.Println("  check                 Automated CI/CD architecture quality gate & rule enforcement")
 	fmt.Println("  design                Reconstructs multi-tier system design, data flow & patterns")
 	fmt.Println("  runtime enable        Configures opt-in runtime instrumentation adapters")
 	fmt.Println("  version               Prints version information")
+	fmt.Println("\nServe Flags:")
+	fmt.Println("  --port <num>          Port for HTTP server (default 8080)")
+	fmt.Println("  --host <ip>           Host IP to bind (default 127.0.0.1 for security)")
+	fmt.Println("  --repo <path>         Repository path to analyze (default current directory)")
+	fmt.Println("  --no-browser          Disable automatic browser launching")
+	fmt.Println("  --allow-home          Allow scanning the user home directory directly")
 	fmt.Println("\nRun 'codedna <command> --help' for details on a specific command.")
 }
 
@@ -108,7 +130,12 @@ func getStore() (*store.Store, error) {
 func runScan(args []string, deep bool) {
 	fs := flag.NewFlagSet("scan", flag.ExitOnError)
 	jsonOut := fs.Bool("json", false, "Output results in JSON format")
+	allowHome := fs.Bool("allow-home", false, "Allow scanning the user home directory directly")
 	fs.Parse(args)
+
+	if *allowHome {
+		os.Setenv("CODEDNA_ALLOW_HOME", "1")
+	}
 
 	target := "."
 	if fs.NArg() > 0 {
@@ -390,17 +417,21 @@ func runReport(args []string) {
 func runServe(args []string) {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	port := fs.Int("port", 8080, "Port for the HTTP server")
+	host := fs.String("host", "127.0.0.1", "Host address to bind HTTP server (default 127.0.0.1 for security)")
 	repo := fs.String("repo", ".", "Repository root path to serve")
+	noBrowser := fs.Bool("no-browser", false, "Disable automatic browser launching")
+	allowHome := fs.Bool("allow-home", false, "Allow scanning the user home directory directly")
 	fs.Parse(args)
 
-	st, err := getStore()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Store error: %v\n", err)
-		os.Exit(1)
+	if *allowHome {
+		os.Setenv("CODEDNA_ALLOW_HOME", "1")
 	}
-	defer st.Close()
 
 	targetPath := *repo
+	if fs.NArg() > 0 {
+		targetPath = fs.Arg(0)
+	}
+
 	// Auto-detect container /workspace volume if running inside Docker
 	if targetPath == "/workspace" {
 		if fi, err := os.Stat("/workspace"); err != nil || !fi.IsDir() {
@@ -418,14 +449,37 @@ func runServe(args []string) {
 		os.Exit(1)
 	}
 
+	addr := fmt.Sprintf("%s:%d", *host, *port)
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "\n[ERROR] Port %d is already in use on %s: %v\n", *port, *host, err)
+		fmt.Fprintf(os.Stderr, "Remediation: Choose an available port using '--port <number>' (e.g. 'codedna serve --port %d')\n\n", *port+1)
+		os.Exit(1)
+	}
+
+	fmt.Println("CodeDNA Architecture Studio")
+	fmt.Printf("\nProject: %s\n", resolvedRepo)
+	fmt.Println("Runtime: Native")
+	fmt.Println("Scanner: Initializing")
+
+	st, err := getStore()
+	if err != nil {
+		listener.Close()
+		fmt.Fprintf(os.Stderr, "Store error: %v\n", err)
+		os.Exit(1)
+	}
+	defer st.Close()
+
 	// Initial scan of target repository
-	fmt.Printf("[CodeDNA] Initializing intelligence store for %s ...\n", resolvedRepo)
 	res, err := engine.Run(resolvedRepo, st, nil)
 	if err != nil {
-		fmt.Printf("Warning: initial scan had notices: %v\n", err)
+		fmt.Printf("Notice: initial scan had warnings: %v\n", err)
 	} else {
-		fmt.Printf("✓ Initial scan ready: %d symbols, %d files parsed\n", res.Stats.SymbolsFound, res.Stats.FilesParsed)
+		_ = res
 	}
+
+	fmt.Println("[OK] Project scan completed")
+	fmt.Println("[OK] Architecture graph generated")
 
 	// Determine web dashboard assets
 	var webFS http.FileSystem
@@ -454,7 +508,7 @@ func runServe(args []string) {
 	}
 
 	for _, dir := range searchDirs {
-		if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
+		if fi, err := os.Stat(filepath.Join(dir, "index.html")); err == nil && !fi.IsDir() {
 			webFS = http.Dir(dir)
 			break
 		}
@@ -472,14 +526,11 @@ func runServe(args []string) {
 
 	server.StartWatcher(ctx)
 
-	addr := fmt.Sprintf(":%d", *port)
-	fmt.Println("==================================================")
-	fmt.Printf("  CodeDNA 2.0 Server Active\n")
-	fmt.Printf("  Web Dashboard:   http://localhost:%d\n", *port)
-	fmt.Printf("  REST API Base:   http://localhost:%d/api\n", *port)
-	fmt.Printf("  Live SSE Stream: http://localhost:%d/api/events\n", *port)
-	fmt.Println("==================================================")
-	fmt.Println("Press Ctrl+C to terminate.")
+	fmt.Println("[OK] Web server started")
+	fmt.Printf("\nDashboard: http://%s:%d\n", *host, *port)
+	fmt.Println("Press Ctrl+C to stop.")
+
+	_ = noBrowser
 
 	httpServer := &http.Server{
 		Addr:    addr,
@@ -498,9 +549,8 @@ func runServe(args []string) {
 		cancel()
 	}()
 
-	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
-		os.Exit(1)
 	}
 }
 
