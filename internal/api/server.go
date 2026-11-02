@@ -397,8 +397,17 @@ func (s *Server) buildGraphData(scanID int64, r *http.Request) (model.GraphData,
 	// 1. Build File-to-File connections
 	fileConns := make(map[string]*fileConnection)
 	nodeDegree := make(map[string]int)
+	inDegree := make(map[string]int)
+	outDegree := make(map[string]int)
 
 	for _, rel := range rels {
+		if rel.FromID != "" && rel.ToID != "" {
+			nodeDegree[rel.FromID]++
+			nodeDegree[rel.ToID]++
+			outDegree[rel.FromID]++
+			inDegree[rel.ToID]++
+		}
+
 		var fromFile, toFile string
 		if strings.HasPrefix(rel.FromID, "file:") {
 			fromFile = strings.TrimPrefix(rel.FromID, "file:")
@@ -473,8 +482,14 @@ func (s *Server) buildGraphData(scanID int64, r *http.Request) (model.GraphData,
 
 	// Collect symbol nodes
 	for _, sym := range syms {
-		if filterType != "" && string(sym.Kind) != filterType {
-			continue
+		if filterType != "" {
+			if filterType == "function" {
+				if sym.Kind != model.SymbolFunction && sym.Kind != model.SymbolMethod {
+					continue
+				}
+			} else if string(sym.Kind) != filterType {
+				continue
+			}
 		}
 		if searchQuery != "" && !strings.Contains(strings.ToLower(sym.Name), searchQuery) && !strings.Contains(strings.ToLower(sym.File), searchQuery) {
 			continue
@@ -489,9 +504,13 @@ func (s *Server) buildGraphData(scanID int64, r *http.Request) (model.GraphData,
 			Exported:   sym.Exported,
 			Language:   sym.Language,
 			Data: map[string]interface{}{
-				"qualifiedName": sym.QualifiedName,
-				"endLine":       sym.EndLine,
-				"parentClass":   sym.ParentClassName,
+				"qualifiedName":   sym.QualifiedName,
+				"endLine":         sym.EndLine,
+				"parentClass":     sym.ParentClassName,
+				"parentClassName": sym.ParentClassName,
+				"connections":     nodeDegree[sym.ID],
+				"inDegree":        inDegree[sym.ID],
+				"outDegree":       outDegree[sym.ID],
 			},
 		})
 	}
