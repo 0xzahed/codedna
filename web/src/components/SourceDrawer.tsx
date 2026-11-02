@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../lib/store';
 import { fetchFileContent } from '../lib/api';
+import CodeEditorViewer from './CodeEditorViewer';
 import { 
   X, 
   FileCode, 
@@ -66,7 +67,7 @@ export default function SourceDrawer() {
   const targetLine = selectedNode.line || 1;
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[580px] bg-charcoal-900 border-l border-charcoal-750 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-y-0 right-0 w-[720px] max-w-[95vw] bg-charcoal-900 border-l border-charcoal-750 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
       {/* Drawer Header */}
       <div className="h-16 border-b border-charcoal-750 px-6 flex items-center justify-between shrink-0 bg-charcoal-850">
         <div className="flex items-center gap-3 truncate">
@@ -88,7 +89,7 @@ export default function SourceDrawer() {
       </div>
 
       {/* Symbol Metrics Ribbon */}
-      <div className="px-6 py-3 border-b border-charcoal-750 bg-charcoal-950/60 flex items-center gap-4 text-xs font-mono">
+      <div className="px-6 py-2.5 border-b border-charcoal-750 bg-charcoal-950/60 flex items-center gap-4 text-xs font-mono">
         <div className="flex items-center gap-1.5 text-zinc-300">
           <Layers className="w-3.5 h-3.5 text-dna-purple" />
           <span className="capitalize">{selectedNode.type}</span>
@@ -108,35 +109,23 @@ export default function SourceDrawer() {
         )}
       </div>
 
-      {/* Code Viewer */}
-      <div className="flex-1 overflow-auto bg-charcoal-950 p-4 font-mono text-xs leading-relaxed select-text">
+      {/* Code Editor Viewer */}
+      <div className="flex-1 overflow-hidden p-3 bg-charcoal-950">
         {loading ? (
           <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs">
-            Loading source code...
+            <div className="flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border-2 border-dna-blue border-t-transparent rounded-full animate-spin" />
+              <span>Loading source code...</span>
+            </div>
           </div>
-        ) : lines.length > 0 ? (
-          <div className="space-y-0.5">
-            {lines.map((codeLine, idx) => {
-              const lineNum = idx + 1;
-              const isTarget = lineNum === targetLine;
-              return (
-                <div
-                  key={lineNum}
-                  id={`L${lineNum}`}
-                  className={`flex items-start px-2 py-0.5 rounded transition-colors ${
-                    isTarget ? 'bg-dna-blue/15 border-l-2 border-dna-blue text-white font-semibold' : 'text-zinc-300 hover:bg-charcoal-800/40'
-                  }`}
-                >
-                  <span className="w-10 shrink-0 text-right pr-4 text-zinc-600 select-none text-[11px]">
-                    {lineNum}
-                  </span>
-                  <pre className="flex-1 overflow-x-auto whitespace-pre font-mono text-[11px]">
-                    {codeLine || ' '}
-                  </pre>
-                </div>
-              );
-            })}
-          </div>
+        ) : fileData?.content ? (
+          <CodeEditorViewer
+            filePath={selectedNode.file || 'source'}
+            content={fileData.content}
+            targetLine={selectedNode.line || 1}
+            language={selectedNode.language}
+            maxHeight="h-full"
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs">
             File preview unavailable.
