@@ -13,6 +13,8 @@ import ReactFlow, {
   Position,
   Handle,
   ReactFlowProvider,
+  EdgeProps,
+  getBezierPath,
 } from 'reactflow';
 import { useAppStore } from '../../lib/store';
 import { 
@@ -50,10 +52,163 @@ import {
   Sparkles,
   ChevronRight,
   Sliders,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 
-// Custom Node Component for Functions, Methods, Classes & Files
+// ======================================================================
+// 1. NEON LIGHTING EDGE COMPONENT (Pulsing Electrical Glowing Wire)
+// ======================================================================
+function NeonLightingEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition = Position.Right,
+  targetPosition = Position.Left,
+  data,
+}: EdgeProps) {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+    curvature: 0.32,
+  });
+
+  const isFocused = data?.isFocused;
+  const isIncoming = data?.isIncoming;
+  const isOutgoing = data?.isOutgoing;
+  const kind = data?.kind || 'calls';
+  const isDimmed = data?.isDimmed;
+
+  let glowColor = '#34d399'; // Emerald for standard call
+  let coreColor = '#6ee7b7';
+  let markerId = 'neon-marker-emerald';
+
+  if (kind === 'imports') {
+    glowColor = '#c084fc'; // Purple for imports
+    coreColor = '#e9d5ff';
+    markerId = 'neon-marker-purple';
+  } else if (kind === 'cross_service_api') {
+    glowColor = '#38bdf8'; // Sky blue for API
+    coreColor = '#bae6fd';
+    markerId = 'neon-marker-cyan';
+  }
+
+  // When focused, spotlight with electric colors
+  if (isFocused) {
+    if (isIncoming) {
+      glowColor = '#34d399'; // Bright emerald incoming
+      coreColor = '#ffffff';
+      markerId = 'neon-marker-white';
+    } else {
+      glowColor = '#38bdf8'; // Bright cyan outgoing
+      coreColor = '#ffffff';
+      markerId = 'neon-marker-white';
+    }
+  }
+
+  if (isDimmed) {
+    return (
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="#272a33"
+        strokeWidth={1}
+        strokeOpacity={0.12}
+      />
+    );
+  }
+
+  const speed = isFocused ? '1.3s' : '2.6s';
+  const pulseRadius = isFocused ? 3.5 : 2.5;
+
+  return (
+    <g className="neon-lighting-edge group cursor-pointer">
+      {/* Layer 1: Ambient Neon Glow (Wide luminous blur halo) */}
+      <path
+        d={edgePath}
+        fill="none"
+        stroke={glowColor}
+        strokeWidth={isFocused ? 8 : 4.5}
+        strokeOpacity={isFocused ? 0.75 : 0.35}
+        strokeLinecap="round"
+        style={{
+          filter: `drop-shadow(0 0 6px ${glowColor}) drop-shadow(0 0 12px ${glowColor})`,
+        }}
+      />
+
+      {/* Layer 2: Core Electric Wire */}
+      <path
+        id={id}
+        d={edgePath}
+        fill="none"
+        stroke={isFocused ? '#ffffff' : coreColor}
+        strokeWidth={isFocused ? 2.5 : 1.8}
+        strokeLinecap="round"
+        strokeDasharray={kind === 'imports' ? '5,5' : undefined}
+        markerEnd={`url(#${isFocused ? 'neon-marker-white' : markerId})`}
+        style={{
+          filter: isFocused ? 'drop-shadow(0 0 5px #ffffff)' : undefined,
+        }}
+      />
+
+      {/* Layer 3: Live Electrical Light Pulse Particle */}
+      <circle 
+        r={pulseRadius} 
+        fill="#ffffff" 
+        style={{ 
+          filter: `drop-shadow(0 0 5px ${glowColor}) drop-shadow(0 0 8px #ffffff)` 
+        }}
+      >
+        <animateMotion dur={speed} repeatCount="indefinite" path={edgePath} />
+      </circle>
+
+      {/* Secondary trailing particle on focused active wires */}
+      {isFocused && (
+        <circle 
+          r={pulseRadius * 0.75} 
+          fill={coreColor} 
+          style={{ 
+            filter: `drop-shadow(0 0 4px ${glowColor})` 
+          }}
+        >
+          <animateMotion dur={speed} begin="0.65s" repeatCount="indefinite" path={edgePath} />
+        </circle>
+      )}
+
+      {/* Optional Interactive Wire Label */}
+      {data?.label && (
+        <text
+          x={labelX}
+          y={labelY - 7}
+          fill={isFocused ? '#ffffff' : coreColor}
+          fontSize={10}
+          fontFamily="monospace"
+          fontWeight="bold"
+          textAnchor="middle"
+          className="select-none pointer-events-none"
+          style={{ filter: `drop-shadow(0 0 4px rgba(0,0,0,0.9))` }}
+        >
+          {data.label}
+        </text>
+      )}
+    </g>
+  );
+}
+
+const edgeTypes = {
+  neonLighting: NeonLightingEdge,
+};
+
+// ======================================================================
+// 2. CUSTOM GRAPH NODE COMPONENT (High-Tech Function & Symbol Card)
+// ======================================================================
 function CustomGraphNode({ data }: { data: any }) {
   const gn: GraphNode = data.node;
   const isFocused = data.isFocused;
@@ -62,6 +217,7 @@ function CustomGraphNode({ data }: { data: any }) {
   const isDimmed = data.isDimmed;
   const onSelect = data.onSelect;
   const onOpenFile = data.onOpenFile;
+  const onIsolate = data.onIsolate;
 
   const isFuncOrMethod = gn.type === 'function' || gn.type === 'method';
   const isMethod = gn.type === 'method' || !!gn.data?.parentClassName;
@@ -74,17 +230,12 @@ function CustomGraphNode({ data }: { data: any }) {
   // Border & glow styling based on focus / caller / callee relationship
   let ringStyle = 'border-charcoal-750 hover:border-zinc-500 bg-[#12141a]';
   if (isFocused) {
-    ringStyle = 'border-dna-blue ring-2 ring-dna-blue bg-[#141b2d] shadow-2xl shadow-dna-blue/30';
+    ringStyle = 'border-dna-blue ring-2 ring-dna-blue bg-[#141b2d] shadow-2xl shadow-dna-blue/40';
   } else if (isCaller) {
-    ringStyle = 'border-emerald-400 ring-2 ring-emerald-400/80 bg-[#102419] shadow-xl shadow-emerald-400/20';
+    ringStyle = 'border-emerald-400 ring-2 ring-emerald-400/80 bg-[#102419] shadow-xl shadow-emerald-400/25';
   } else if (isCallee) {
-    ringStyle = 'border-sky-400 ring-2 ring-sky-400/80 bg-[#0e1f2b] shadow-xl shadow-sky-400/20';
+    ringStyle = 'border-sky-400 ring-2 ring-sky-400/80 bg-[#0e1f2b] shadow-xl shadow-sky-400/25';
   }
-
-  // Extract clean package/dir name
-  const pkgName = gn.file 
-    ? (gn.file.includes('/') ? gn.file.split('/').slice(0, 2).join('/') : gn.file)
-    : 'root';
 
   return (
     <div
@@ -93,7 +244,7 @@ function CustomGraphNode({ data }: { data: any }) {
         isDimmed ? 'opacity-25 hover:opacity-100' : 'opacity-100'
       }`}
     >
-      {/* React Flow Connection Handles on all 4 sides for clean DAG routing */}
+      {/* React Flow Connection Handles on Left and Right for clean DAG flow */}
       <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !bg-emerald-400 !border-none" />
       <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !bg-sky-400 !border-none" />
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-zinc-500 !border-none" />
@@ -123,8 +274,9 @@ function CustomGraphNode({ data }: { data: any }) {
 
         {/* Relationship Status Badge */}
         {isFocused ? (
-          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-dna-blue text-white shadow-sm">
-            ★ FOCUSED
+          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-dna-blue text-white shadow-sm flex items-center gap-1">
+            <Zap className="w-2.5 h-2.5" />
+            <span>FOCUSED</span>
           </span>
         ) : isCaller ? (
           <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
@@ -135,7 +287,7 @@ function CustomGraphNode({ data }: { data: any }) {
             ▼ CALLEE
           </span>
         ) : complexity > 15 ? (
-          <span className="flex items-center text-[10px] font-mono text-rose-400 font-bold" title={`Cyclomatic Complexity: ${complexity}`}>
+          <span className="flex items-center text-[10px] font-mono text-rose-400 font-bold" title={`Complexity: ${complexity}`}>
             <Flame className="w-3 h-3 mr-0.5 text-rose-500" />
             {complexity}
           </span>
@@ -175,18 +327,33 @@ function CustomGraphNode({ data }: { data: any }) {
           )}
         </div>
 
-        {gn.file && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenFile && onOpenFile(gn.file, gn.line);
-            }}
-            className="px-1.5 py-0.5 rounded bg-charcoal-800 hover:bg-charcoal-700 text-zinc-300 hover:text-white border border-charcoal-700 text-[9px] font-mono transition-colors"
-            title="Inspect source code in editor"
-          >
-            Code
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {isFocused && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onIsolate && onIsolate(gn);
+              }}
+              className="px-1.5 py-0.5 rounded bg-dna-blue/20 hover:bg-dna-blue/30 text-dna-blue border border-dna-blue/40 text-[9px] font-mono transition-colors"
+              title="Isolate this call chain"
+            >
+              Isolate
+            </button>
+          )}
+
+          {gn.file && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenFile && onOpenFile(gn.file, gn.line);
+              }}
+              className="px-1.5 py-0.5 rounded bg-charcoal-800 hover:bg-charcoal-700 text-zinc-300 hover:text-white border border-charcoal-700 text-[9px] font-mono transition-colors"
+              title="Inspect source code in editor"
+            >
+              Code
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -196,7 +363,9 @@ const nodeTypes = {
   customNode: CustomGraphNode,
 };
 
-// Topological Level DAG Calculator for Call Graphs
+// ======================================================================
+// 3. TOPOLOGICAL LEVEL DAG CALCULATOR (Left ➔ Right Call Pipeline)
+// ======================================================================
 function computeCallDagLevels(
   nodes: GraphNode[],
   edges: GraphEdge[]
@@ -244,8 +413,8 @@ function computeCallDagLevels(
     const neighbors = adj.get(id) || [];
     for (const nxt of neighbors) {
       const nextLevel = Math.max(levels.get(nxt) ?? 0, level + 1);
-      // Cap at 10 depth levels to prevent infinite loops from cyclic calls
-      if (nextLevel < 10) {
+      // Cap at 8 depth levels to prevent infinite loops from cyclic calls
+      if (nextLevel < 8) {
         levels.set(nxt, nextLevel);
         if (!visited.has(nxt)) {
           queue.push({ id: nxt, level: nextLevel });
@@ -263,17 +432,45 @@ function computeCallDagLevels(
   return { levels, maxLevel };
 }
 
+// Architectural Tier Ordering for Domain Cluster Layout
+const DOMAIN_TIER_ORDER: Record<string, number> = {
+  'cmd/codedna': 0,
+  'internal/api': 1,
+  'internal/engine': 2,
+  'internal/parser': 2,
+  'internal/scanner': 2,
+  'internal/sysdesign': 3,
+  'internal/architecture': 3,
+  'internal/analysis': 3,
+  'internal/impact': 3,
+  'internal/ai': 3,
+  'internal/store': 4,
+  'internal/watcher': 4,
+  'internal/runtime': 4,
+  'internal/blame': 4,
+  'internal/report': 4,
+  'web/src': 5,
+};
+
+// ======================================================================
+// 4. MAIN GRAPH VIEW COMPONENT
+// ======================================================================
 export default function GraphView() {
   const { scanId, setSelectedNode, workspaceId, setWorkspaceId, refreshKey } = useAppStore();
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Filters & layout state
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<string>('function');
+  const [selectedLanguage, setSelectedLanguage] = useState<'all' | 'go' | 'typescript'>('all');
   const [selectedPackage, setSelectedPackage] = useState<string>('all');
-  const [layoutMode, setLayoutMode] = useState<'dag' | 'swimlane' | 'grid'>('dag');
+  const [layoutMode, setLayoutMode] = useState<'dag' | 'domain' | 'grid'>('dag');
   const [connectedOnly, setConnectedOnly] = useState(true);
+  const [hideTests, setHideTests] = useState(true);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [isolatedSubgraph, setIsolatedSubgraph] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Embedded Code Editor modal
@@ -390,7 +587,7 @@ export default function GraphView() {
     return { callerNodeIds: callers, calleeNodeIds: callees, focusedNode: target };
   }, [focusedNodeId, graphData]);
 
-  // Compute Layout & React Flow nodes/edges
+  // Layout & React Flow graph computation
   useEffect(() => {
     if (!graphData.nodes || graphData.nodes.length === 0) {
       setNodes([]);
@@ -398,9 +595,10 @@ export default function GraphView() {
       return;
     }
 
-    // 1. Initial filter
+    // 1. Initial Filtering
     let filtered = graphData.nodes;
 
+    // Type filter
     if (selectedType !== 'all') {
       if (selectedType === 'function') {
         filtered = filtered.filter((n) => n.type === 'function' || n.type === 'method');
@@ -409,10 +607,39 @@ export default function GraphView() {
       }
     }
 
-    if (selectedPackage !== 'all') {
-      filtered = filtered.filter((n) => n.file && n.file.startsWith(selectedPackage));
+    // Language filter
+    if (selectedLanguage !== 'all') {
+      if (selectedLanguage === 'go') {
+        filtered = filtered.filter((n) => n.file?.endsWith('.go'));
+      } else if (selectedLanguage === 'typescript') {
+        filtered = filtered.filter((n) => n.file?.endsWith('.ts') || n.file?.endsWith('.tsx') || n.file?.endsWith('.js'));
+      }
     }
 
+    // Hide tests filter
+    if (hideTests) {
+      filtered = filtered.filter((n) => {
+        if (!n.file) return true;
+        const f = n.file.toLowerCase();
+        return !f.includes('_test.go') && !f.includes('.test.') && !f.includes('.spec.');
+      });
+    }
+
+    // Package filter: include package functions + external callers/callees to keep connections alive!
+    if (selectedPackage !== 'all') {
+      const pkgNodeIds = new Set(
+        filtered.filter((n) => n.file && n.file.startsWith(selectedPackage)).map((n) => n.id)
+      );
+      // Keep package nodes + direct boundary callers & callees
+      const boundaryNodeIds = new Set<string>();
+      (graphData.edges || []).forEach((e) => {
+        if (pkgNodeIds.has(e.source)) boundaryNodeIds.add(e.target);
+        if (pkgNodeIds.has(e.target)) boundaryNodeIds.add(e.source);
+      });
+      filtered = filtered.filter((n) => pkgNodeIds.has(n.id) || boundaryNodeIds.has(n.id));
+    }
+
+    // Search query filter
     if (search.trim()) {
       const q = search.toLowerCase();
       filtered = filtered.filter((n) => 
@@ -420,9 +647,16 @@ export default function GraphView() {
       );
     }
 
+    // Isolate Subgraph mode: show ONLY focused node + its direct callers & callees
+    if (isolatedSubgraph && focusedNodeId) {
+      filtered = filtered.filter(
+        (n) => n.id === focusedNodeId || callerNodeIds.has(n.id) || calleeNodeIds.has(n.id)
+      );
+    }
+
     const filteredIds = new Set(filtered.map((n) => n.id));
 
-    // 2. Filter edges strictly within current nodes
+    // 2. Filter edges strictly within visible nodes
     const validEdges = (graphData.edges || []).filter(
       (e) => filteredIds.has(e.source) && filteredIds.has(e.target)
     );
@@ -435,7 +669,7 @@ export default function GraphView() {
     });
 
     // If connectedOnly is true and viewing functions, hide isolated zero-degree nodes
-    if (connectedOnly && (selectedType === 'function' || selectedType === 'all')) {
+    if (connectedOnly && (selectedType === 'function' || selectedType === 'all') && !isolatedSubgraph) {
       filtered = filtered.filter((n) => (activeDegree.get(n.id) || 0) > 0 || n.id === focusedNodeId);
     }
 
@@ -447,8 +681,33 @@ export default function GraphView() {
     // 3. Compute Positions based on selected Layout Mode
     const positions = new Map<string, { x: number; y: number }>();
 
-    if (layoutMode === 'dag') {
-      // Topological Level DAG layout (Left to Right call progression)
+    if (isolatedSubgraph && focusedNodeId) {
+      // Clean 3-tier Focal Subgraph Layout:
+      // Left: Callers (Incoming) ➔ Center: Target Function ➔ Right: Callees (Outgoing)
+      const callersList = filtered.filter((n) => callerNodeIds.has(n.id));
+      const calleesList = filtered.filter((n) => calleeNodeIds.has(n.id));
+      const targetList = filtered.filter((n) => n.id === focusedNodeId);
+
+      const maxH = Math.max(callersList.length, calleesList.length, 1);
+      const centerY = (maxH * 140) / 2 + 50;
+
+      // Position Target in center
+      targetList.forEach((gn) => {
+        positions.set(gn.id, { x: 420, y: centerY });
+      });
+
+      // Position Callers on left
+      callersList.forEach((gn, idx) => {
+        positions.set(gn.id, { x: 60, y: idx * 140 + 70 });
+      });
+
+      // Position Callees on right
+      calleesList.forEach((gn, idx) => {
+        positions.set(gn.id, { x: 780, y: idx * 140 + 70 });
+      });
+
+    } else if (layoutMode === 'dag') {
+      // Topological Level DAG layout with Sub-Column Wrapping (Prevents 30,000px towers!)
       const { levels } = computeCallDagLevels(filtered, finalEdges);
       const levelBuckets = new Map<number, GraphNode[]>();
 
@@ -461,23 +720,36 @@ export default function GraphView() {
       // Sort each level by package and complexity
       levelBuckets.forEach((bucket) => {
         bucket.sort((a, b) => {
-          const pkgA = a.file?.split('/')[0] || '';
-          const pkgB = b.file?.split('/')[0] || '';
+          const pkgA = a.file ? a.file.split('/').slice(0, 2).join('/') : '';
+          const pkgB = b.file ? b.file.split('/').slice(0, 2).join('/') : '';
           if (pkgA !== pkgB) return pkgA.localeCompare(pkgB);
-          return (b.complexity || 0) - (a.complexity || 0);
+          const degA = (a.data?.connections as number) || 0;
+          const degB = (b.data?.connections as number) || 0;
+          return degB - degA;
         });
       });
 
-      levelBuckets.forEach((bucket, lvl) => {
-        bucket.forEach((gn, row) => {
-          positions.set(gn.id, {
-            x: lvl * 360 + 60,
-            y: row * 140 + 60,
-          });
+      const MAX_ROWS_PER_COL = 7;
+      let currentX = 60;
+      const sortedLevels = Array.from(levelBuckets.keys()).sort((a, b) => a - b);
+
+      sortedLevels.forEach((lvl) => {
+        const bucket = levelBuckets.get(lvl) || [];
+        const subCols = Math.ceil(bucket.length / MAX_ROWS_PER_COL) || 1;
+
+        bucket.forEach((gn, idx) => {
+          const subCol = Math.floor(idx / MAX_ROWS_PER_COL);
+          const row = idx % MAX_ROWS_PER_COL;
+          const x = currentX + subCol * 320;
+          const y = row * 145 + 70;
+          positions.set(gn.id, { x, y });
         });
+
+        currentX += subCols * 320 + 80;
       });
-    } else if (layoutMode === 'swimlane') {
-      // Package Swimlanes layout
+
+    } else if (layoutMode === 'domain') {
+      // Domain Clusters Layout: Group by Architecture Tier
       const pkgMap = new Map<string, GraphNode[]>();
       filtered.forEach((gn) => {
         const pkg = gn.file ? (gn.file.includes('/') ? gn.file.split('/').slice(0, 2).join('/') : 'root') : 'root';
@@ -485,17 +757,30 @@ export default function GraphView() {
         pkgMap.get(pkg)!.push(gn);
       });
 
-      const sortedPkgs = Array.from(pkgMap.keys()).sort();
-      sortedPkgs.forEach((pkg, col) => {
+      const sortedPkgs = Array.from(pkgMap.keys()).sort((a, b) => {
+        const tierA = DOMAIN_TIER_ORDER[a] ?? 10;
+        const tierB = DOMAIN_TIER_ORDER[b] ?? 10;
+        if (tierA !== tierB) return tierA - tierB;
+        return a.localeCompare(b);
+      });
+
+      let clusterX = 60;
+      sortedPkgs.forEach((pkg) => {
         const list = pkgMap.get(pkg) || [];
         list.sort((a, b) => (b.complexity || 0) - (a.complexity || 0));
-        list.forEach((gn, row) => {
+
+        const subCols = Math.ceil(list.length / 6) || 1;
+        list.forEach((gn, idx) => {
+          const subCol = Math.floor(idx / 6);
+          const row = idx % 6;
           positions.set(gn.id, {
-            x: col * 340 + 60,
-            y: row * 140 + 80,
+            x: clusterX + subCol * 320,
+            y: row * 145 + 80,
           });
         });
+        clusterX += subCols * 320 + 90;
       });
+
     } else {
       // Compact Grid layout
       const cols = Math.ceil(Math.sqrt(filtered.length)) || 4;
@@ -504,7 +789,7 @@ export default function GraphView() {
         const row = Math.floor(idx / cols);
         positions.set(gn.id, {
           x: col * 320 + 60,
-          y: row * 140 + 60,
+          y: row * 145 + 70,
         });
       });
     }
@@ -529,54 +814,42 @@ export default function GraphView() {
           isCallee,
           isDimmed,
           onSelect: (selected: GraphNode) => {
-            setFocusedNodeId(selected.id === focusedNodeId ? null : selected.id);
+            if (focusedNodeId === selected.id) {
+              setFocusedNodeId(null);
+              setIsolatedSubgraph(false);
+            } else {
+              setFocusedNodeId(selected.id);
+            }
             setSelectedNode(selected);
           },
           onOpenFile: handleOpenFile,
+          onIsolate: () => {
+            setIsolatedSubgraph(true);
+          },
         },
       };
     });
 
-    // 5. Transform to React Flow Edges
+    // 5. Transform to React Flow Edges with Neon Lighting
     const rfEdges: Edge[] = finalEdges.map((ge) => {
       const isConnectedToFocus = focusedNodeId === ge.source || focusedNodeId === ge.target;
       const isIncomingToFocus = focusedNodeId === ge.target;
       const isOutgoingFromFocus = focusedNodeId === ge.source;
       const hasFocus = !!focusedNodeId;
-
-      let strokeColor = '#34d399'; // default emerald for call
-      if (ge.kind === 'imports') strokeColor = '#a78bfa'; // violet for import
-      if (ge.kind === 'cross_service_api') strokeColor = '#38bdf8'; // sky blue for api
-
-      if (hasFocus) {
-        if (isIncomingToFocus) strokeColor = '#34d399'; // bright emerald for incoming
-        else if (isOutgoingFromFocus) strokeColor = '#38bdf8'; // bright sky blue for outgoing
-        else strokeColor = '#272a33'; // dimmed
-      }
-
-      const opacity = hasFocus ? (isConnectedToFocus ? 1 : 0.12) : 0.85;
-      const strokeWidth = isConnectedToFocus ? 3 : 1.6;
+      const isDimmed = hasFocus && !isConnectedToFocus;
 
       return {
         id: ge.id,
         source: ge.source,
         target: ge.target,
-        type: 'smoothstep',
-        animated: isConnectedToFocus || ge.kind === 'cross_service_api',
-        label: hasFocus && isConnectedToFocus ? (isIncomingToFocus ? 'calls ➔' : '➔ invokes') : undefined,
-        labelStyle: { fill: strokeColor, fontSize: 10, fontFamily: 'monospace', fontWeight: 600 },
-        labelBgStyle: { fill: '#141518', fillOpacity: 0.95 },
-        style: {
-          stroke: strokeColor,
-          strokeWidth,
-          opacity,
-          strokeDasharray: ge.kind === 'imports' ? '4,4' : undefined,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: strokeColor,
-          width: isConnectedToFocus ? 14 : 10,
-          height: isConnectedToFocus ? 14 : 10,
+        type: 'neonLighting',
+        data: {
+          isFocused: isConnectedToFocus,
+          isIncoming: isIncomingToFocus,
+          isOutgoing: isOutgoingFromFocus,
+          isDimmed,
+          kind: ge.kind,
+          label: hasFocus && isConnectedToFocus ? (isIncomingToFocus ? 'calls ➔' : '➔ invokes') : undefined,
         },
       };
     });
@@ -587,10 +860,13 @@ export default function GraphView() {
     graphData, 
     search, 
     selectedType, 
+    selectedLanguage,
     selectedPackage, 
     layoutMode, 
     connectedOnly, 
+    hideTests,
     focusedNodeId, 
+    isolatedSubgraph,
     callerNodeIds, 
     calleeNodeIds,
     setSelectedNode
@@ -604,7 +880,7 @@ export default function GraphView() {
     }
   }, [focusedNodeId, setSelectedNode]);
 
-  // Extract caller and callee nodes for the Inspector drawer
+  // Extract caller and callee nodes for Inspector drawer
   const callerNodes = useMemo(() => {
     return (graphData.nodes || []).filter((n) => callerNodeIds.has(n.id));
   }, [graphData.nodes, callerNodeIds]);
@@ -615,17 +891,67 @@ export default function GraphView() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-charcoal-950 relative overflow-hidden select-none">
+      {/* Hidden SVG Definitions for Neon Glowing Arrowheads & Filters */}
+      <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
+        <defs>
+          <marker
+            id="neon-marker-emerald"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="8"
+            markerHeight="8"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#34d399" />
+          </marker>
+          <marker
+            id="neon-marker-cyan"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="8"
+            markerHeight="8"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8" />
+          </marker>
+          <marker
+            id="neon-marker-purple"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="8"
+            markerHeight="8"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#c084fc" />
+          </marker>
+          <marker
+            id="neon-marker-white"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="8"
+            markerHeight="8"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ffffff" />
+          </marker>
+        </defs>
+      </svg>
+
       {/* Top Controls Toolbar */}
       <div className="h-14 border-b border-charcoal-750 bg-charcoal-900/95 backdrop-blur px-6 flex items-center justify-between gap-4 z-10 shrink-0 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           {/* Search bar */}
-          <div className="relative w-60">
+          <div className="relative w-56">
             <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search functions & files..."
+              placeholder="Search functions &amp; files..."
               className="w-full bg-charcoal-850 border border-charcoal-750 rounded-lg pl-8 pr-7 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-dna-blue/50 font-mono"
             />
             {search && (
@@ -651,12 +977,32 @@ export default function GraphView() {
                 onClick={() => {
                   setSelectedType(t.id);
                   setFocusedNodeId(null);
+                  setIsolatedSubgraph(false);
                 }}
                 className={`px-3 py-1 rounded-md transition-all ${
                   selectedType === t.id ? 'bg-dna-blue text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
                 {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Language Selector */}
+          <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
+            {[
+              { id: 'all', label: 'All Lang' },
+              { id: 'go', label: 'Go' },
+              { id: 'typescript', label: 'TS/JS' },
+            ].map((l) => (
+              <button
+                key={l.id}
+                onClick={() => setSelectedLanguage(l.id as any)}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  selectedLanguage === l.id ? 'bg-charcoal-700 text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {l.label}
               </button>
             ))}
           </div>
@@ -670,8 +1016,9 @@ export default function GraphView() {
                 onChange={(e) => {
                   setSelectedPackage(e.target.value);
                   setFocusedNodeId(null);
+                  setIsolatedSubgraph(false);
                 }}
-                className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer max-w-[140px] truncate"
+                className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer max-w-[130px] truncate"
               >
                 <option value="all" className="bg-charcoal-900 text-white">All Packages</option>
                 {packageList.map((pkg) => (
@@ -682,6 +1029,20 @@ export default function GraphView() {
               </select>
             </div>
           )}
+
+          {/* Hide Tests Toggle */}
+          <button
+            onClick={() => setHideTests(!hideTests)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
+              hideTests
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 font-semibold'
+                : 'bg-charcoal-850 text-zinc-400 border-charcoal-750 hover:text-zinc-200'
+            }`}
+            title="Exclude test functions from the architectural call graph"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>{hideTests ? 'Prod Only' : 'With Tests'}</span>
+          </button>
 
           {/* Connected Only Filter Toggle */}
           <button
@@ -694,7 +1055,7 @@ export default function GraphView() {
             title="Filter out orphan helper symbols with 0 connections"
           >
             <Activity className="w-3.5 h-3.5" />
-            <span>Connected Only</span>
+            <span>Connected</span>
           </button>
         </div>
 
@@ -712,13 +1073,13 @@ export default function GraphView() {
               Call Flow DAG
             </button>
             <button
-              onClick={() => setLayoutMode('swimlane')}
+              onClick={() => setLayoutMode('domain')}
               className={`px-2.5 py-1 rounded-md transition-all ${
-                layoutMode === 'swimlane' ? 'bg-dna-blue text-white shadow-sm font-semibold' : 'text-zinc-400 hover:text-white'
+                layoutMode === 'domain' ? 'bg-dna-blue text-white shadow-sm font-semibold' : 'text-zinc-400 hover:text-white'
               }`}
-              title="Group columns by package/module"
+              title="Group columns by architectural domain tier"
             >
-              Swimlanes
+              Domain Clusters
             </button>
             <button
               onClick={() => setLayoutMode('grid')}
@@ -746,12 +1107,13 @@ export default function GraphView() {
         </div>
       </div>
 
-      {/* Focus Indicator Ribbon (when a function is selected) */}
+      {/* Focus & Subgraph Ribbon (when a function is selected) */}
       {focusedNode && (
         <div className="bg-[#141b2d] border-b border-dna-blue/30 px-6 py-2 flex items-center justify-between text-xs font-mono z-10 shrink-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-dna-blue text-white">
-              Call Path Focus
+            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-dna-blue text-white flex items-center gap-1 shadow-sm">
+              <Zap className="w-3 h-3" />
+              <span>{isolatedSubgraph ? 'Isolated Subgraph Flow' : 'Call Path Active'}</span>
             </span>
             <span className="text-white font-bold">{focusedNode.label}</span>
             <span className="text-zinc-500">•</span>
@@ -760,13 +1122,36 @@ export default function GraphView() {
             <span className="text-sky-400 font-semibold">{calleeNodes.length} Calls (Outgoing)</span>
           </div>
 
-          <button
-            onClick={() => setFocusedNodeId(null)}
-            className="flex items-center gap-1 text-zinc-400 hover:text-white px-2 py-0.5 rounded hover:bg-charcoal-800 transition-colors"
-          >
-            <span>Reset View</span>
-            <X className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!isolatedSubgraph ? (
+              <button
+                onClick={() => setIsolatedSubgraph(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-dna-blue/20 hover:bg-dna-blue/30 border border-dna-blue/40 text-dna-blue text-[11px] font-semibold transition-all"
+                title="Isolate this exact call workflow"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Isolate Subgraph</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsolatedSubgraph(false)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-charcoal-800 hover:bg-charcoal-700 text-zinc-300 text-[11px] font-semibold transition-all"
+              >
+                <span>Show Full Graph</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                setFocusedNodeId(null);
+                setIsolatedSubgraph(false);
+              }}
+              className="flex items-center gap-1 text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-charcoal-800 transition-colors"
+            >
+              <span>Reset</span>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -775,12 +1160,12 @@ export default function GraphView() {
         {loading ? (
           <div className="h-full flex flex-col items-center justify-center text-zinc-400 font-mono text-xs gap-3">
             <div className="w-6 h-6 border-2 border-dna-blue border-t-transparent rounded-full animate-spin" />
-            <span>Resolving AST Call Graph &amp; Functions...</span>
+            <span>Resolving AST Call Graph &amp; Glowing Circuit Lines...</span>
           </div>
         ) : nodes.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-zinc-400 font-mono text-xs gap-2">
             <Activity className="w-8 h-8 text-zinc-600" />
-            <p>No symbols match the current filter ({selectedType}, {selectedPackage}).</p>
+            <p>No symbols match the current filters ({selectedType}, {selectedPackage}).</p>
             {connectedOnly && (
               <button
                 onClick={() => setConnectedOnly(false)}
@@ -796,6 +1181,7 @@ export default function GraphView() {
               nodes={nodes}
               edges={edges}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onNodeClick={onNodeClick}
@@ -820,20 +1206,23 @@ export default function GraphView() {
           </ReactFlowProvider>
         )}
 
-        {/* Legend Toolbar */}
+        {/* Dynamic Neon Circuit Legend Toolbar */}
         <div className="absolute bottom-4 left-4 z-10 pointer-events-auto hidden md:flex items-center gap-3 bg-[#14171e]/90 backdrop-blur-md px-3.5 py-2 rounded-xl border border-charcoal-700 text-[11px] font-mono text-zinc-300 shadow-xl">
-          <span className="text-zinc-500 font-bold">Call Graph:</span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-            <span>Caller (Incoming)</span>
+          <span className="text-zinc-500 font-bold flex items-center gap-1">
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span>Lighting Wires:</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
-            <span>Callee (Outgoing)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+            <span>Caller Pulse (Incoming)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-            <span>Imports</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
+            <span>Callee Pulse (Outgoing)</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
+            <span>Import</span>
           </span>
           <span className="text-zinc-600">|</span>
           <span className="text-zinc-400">Click any function to isolate its call path</span>
@@ -863,7 +1252,10 @@ export default function GraphView() {
             </div>
 
             <button
-              onClick={() => setFocusedNodeId(null)}
+              onClick={() => {
+                setFocusedNodeId(null);
+                setIsolatedSubgraph(false);
+              }}
               className="p-1 rounded text-zinc-400 hover:text-white hover:bg-charcoal-750"
               title="Close Inspector"
             >
@@ -891,18 +1283,35 @@ export default function GraphView() {
             </div>
           </div>
 
-          {/* Action Button: Open in Code Editor */}
-          {focusedNode.file && (
-            <div className="p-3 border-b border-charcoal-800 bg-charcoal-950">
+          {/* Action Buttons: Isolate Subgraph & Code Editor */}
+          <div className="p-3 border-b border-charcoal-800 bg-charcoal-950 space-y-2">
+            {!isolatedSubgraph ? (
+              <button
+                onClick={() => setIsolatedSubgraph(true)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-dna-blue/20 hover:bg-dna-blue/30 text-dna-blue border border-dna-blue/40 text-xs font-mono font-semibold transition-all shadow-md"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Isolate Call Subgraph (Clean Flow)</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsolatedSubgraph(false)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-charcoal-800 hover:bg-charcoal-750 text-zinc-300 text-xs font-mono font-semibold transition-all"
+              >
+                <span>Restore Full Architecture Graph</span>
+              </button>
+            )}
+
+            {focusedNode.file && (
               <button
                 onClick={() => handleOpenFile(focusedNode.file, focusedNode.line)}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-dna-blue hover:bg-blue-600 text-xs font-mono font-semibold text-white transition-all shadow-md"
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-charcoal-850 hover:bg-charcoal-800 text-xs font-mono font-semibold text-white border border-charcoal-700 transition-all shadow-md"
               >
-                <FileCode className="w-4 h-4" />
+                <FileCode className="w-4 h-4 text-dna-blue" />
                 <span>Inspect in Code Editor (Line {focusedNode.line || 1})</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Callers & Callees Lists */}
           <div className="flex-1 overflow-y-auto p-4 space-y-5">
@@ -910,7 +1319,7 @@ export default function GraphView() {
             <div>
               <div className="flex items-center justify-between text-xs font-mono font-bold text-emerald-400 mb-2">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
                   <span>Callers (Who invokes this):</span>
                 </span>
                 <span className="text-[10px] text-zinc-500 font-normal">{callerNodes.length} functions</span>
@@ -941,7 +1350,7 @@ export default function GraphView() {
                 </div>
               ) : (
                 <div className="p-3 rounded-lg bg-charcoal-900/50 border border-charcoal-800 text-center text-zinc-500 text-xs font-mono">
-                  No direct callers in current codebase. (Entrypoint / Public API)
+                  No direct callers in current view. (Entrypoint / Public API)
                 </div>
               )}
             </div>
@@ -950,7 +1359,7 @@ export default function GraphView() {
             <div>
               <div className="flex items-center justify-between text-xs font-mono font-bold text-sky-400 mb-2">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-sky-400" />
+                  <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]" />
                   <span>Callees (What this invokes):</span>
                 </span>
                 <span className="text-[10px] text-zinc-500 font-normal">{calleeNodes.length} functions</span>
@@ -1092,7 +1501,7 @@ export default function GraphView() {
             </div>
 
             <div className="p-3 border-t border-charcoal-750 bg-charcoal-850 px-6 flex items-center justify-between text-[11px] font-mono text-zinc-400">
-              <span>Ready for GitHub README, Notion, Obsidian & Architecture Docs</span>
+              <span>Ready for GitHub README, Notion, Obsidian &amp; Architecture Docs</span>
               <span>Format: {exportFormat === 'mermaid' ? 'Mermaid Flowchart' : 'C4 Container'}</span>
             </div>
           </div>
