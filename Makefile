@@ -45,6 +45,14 @@ check: build-cli
 	@echo "==> Running CodeDNA Architecture Quality Gate..."
 	@./$(BIN_DIR)/$(BINARY_NAME) check --min-health=80 --max-cycles=0
 
+## doctor: Run environment diagnostics and health checks
+doctor: build-cli
+	@./$(BIN_DIR)/$(BINARY_NAME) doctor
+
+## install: Install CodeDNA into user PATH (~/.local/bin)
+install: build-cli
+	@./$(BIN_DIR)/$(BINARY_NAME) install
+
 ## run: Start the local CodeDNA server daemon on port 8080
 run: build-cli
 	@echo "==> Launching CodeDNA daemon on http://localhost:8080..."

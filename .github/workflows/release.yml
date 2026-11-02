@@ -1,0 +1,181 @@
+name: Build & Publish Multi-Platform Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag (e.g. v2.4.0)'
+        required: true
+        default: 'v2.4.0'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  test-and-build-ui:
+    name: Run Quality Gate & Build UI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CodeDNA
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Dependencies & Build Web Dashboard
+        run: |
+          cd web
+          npm ci
+          npm run build
+
+      - name: Run Test Suite with Race Detector
+        run: |
+          go test -v -race ./...
+
+      - name: Archive Web Dashboard Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-out
+          path: web/out/
+          retention-days: 1
+
+  build-binaries:
+    name: Build Binary (${{ matrix.target.os }}/${{ matrix.target.arch }})
+    needs: test-and-build-ui
+    runs-on: ${{ matrix.target.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - { os: linux, arch: amd64, runner: ubuntu-latest, ext: "" }
+          - { os: darwin, arch: amd64, runner: macos-13, ext: "" }
+          - { os: darwin, arch: arm64, runner: macos-latest, ext: "" }
+          - { os: windows, arch: amd64, runner: windows-latest, ext: ".exe" }
+    steps:
+      - name: Checkout CodeDNA
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Download Web Dashboard Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: web-out
+          path: web/out
+
+      - name: Determine Tag
+        id: tag
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ -z "$TAG" ] || [[ "$TAG" == main* ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          if [ -z "$TAG" ]; then
+            TAG="v2.4.0"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Compile CodeDNA Binary
+        shell: bash
+        env:
+          GOOS: ${{ matrix.target.os }}
+          GOARCH: ${{ matrix.target.arch }}
+          CGO_ENABLED: 1
+        run: |
+          mkdir -p dist/bin
+          go build -ldflags="-s -w" -o "dist/bin/codedna${{ matrix.target.ext }}" ./cmd/codedna
+
+      - name: Package Release Bundle
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          mkdir -p dist/web
+          cp -r web/out dist/web/
+          cp README.md LICENSE dist/ 2>/dev/null || true
+
+          if [ "${{ matrix.target.os }}" = "windows" ]; then
+            cd dist
+            7z a -tzip "../codedna-${TAG}-windows-amd64.zip" *
+            cp "../codedna-${TAG}-windows-amd64.zip" "../codedna-windows-amd64.zip"
+            cd ..
+          else
+            cd dist
+            tar -czf "../codedna-${TAG}-${{ matrix.target.os }}-${{ matrix.target.arch }}.tar.gz" *
+            cp "../codedna-${TAG}-${{ matrix.target.os }}-${{ matrix.target.arch }}.tar.gz" "../codedna-${{ matrix.target.os }}-${{ matrix.target.arch }}.tar.gz"
+            cd ..
+          fi
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target.os }}-${{ matrix.target.arch }}
+          path: |
+            *.tar.gz
+            *.zip
+          retention-days: 1
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CodeDNA
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-bundles
+
+      - name: Prepare Release Assets & Checksums
+        shell: bash
+        run: |
+          mkdir -p dist-assets
+          find release-bundles -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} dist-assets/ \;
+          cd dist-assets
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Determine Tag
+        id: tag
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ -z "$TAG" ] || [[ "$TAG" == main* ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          if [ -z "$TAG" ]; then
+            TAG="v2.4.0"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: CodeDNA ${{ steps.tag.outputs.tag }} — Living Architecture Engine
+          files: |
+            dist-assets/*.tar.gz
+            dist-assets/*.zip
+            dist-assets/SHA256SUMS
+          generate_release_notes: true
+          draft: false
+          prerelease: false

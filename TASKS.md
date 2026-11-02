@@ -155,6 +155,17 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - Added automated GitHub Actions CI test quality gate workflow `.github/workflows/ci.yml`.
   - Added container volume auto-detection and comprehensive asset resolution paths in `cmd/codedna/main.go` and `Dockerfile`.
   - Updated `README.md` with 1-line Docker (`docker run -d -p 8080:8080 -v $(pwd):/workspace ghcr.io/0xzahed/codedna:latest`) and Shell (`curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash`) instant launch commands.
+- [x] **Task 5.10 — Universal Zero-Dependency Installer & Cross-Platform Runtime Hardening:**
+  - Implemented `codedna doctor` for comprehensive environment diagnostics, binary path, PATH health, port availability, and toolchains.
+  - Implemented `codedna install`, `codedna update`, `codedna uninstall` lifecycle subcommands.
+  - Implemented `codedna docker` launcher cleanly separating native execution from optional containerized execution.
+  - Hardened `codedna serve`: immediate port conflict detection before banner printing, default binding to `127.0.0.1` for security, graceful SIGINT/SIGTERM shutdown, exact prompt-specified output format.
+  - Implemented Home Directory Protection in `scanner.ResolveTarget` preventing accidental home directory scans.
+  - Added `.gitignore` pattern reader and binary file filtering (`.exe`, `.so`, `.dll`, `.zip`, `.png`, `.db`, etc.) in `scanner.Scan`.
+  - Added heuristic static parser (`internal/parser/heuristic.go`) supporting C, C++, C#, Rust, Ruby, Kotlin, Swift, Dart, SQL, GraphQL without requiring tree-sitter grammars.
+  - Created Windows PowerShell 1-liner installer `install.ps1` with SHA256 checksum verification and User PATH setup.
+  - Updated `install.sh` with prioritized installation: Prebuilt binary -> Native Go source build -> Optional Docker -> Actionable error.
+  - Added `.github/workflows/release.yml` for automated multi-platform release builds and checksum generation.
 - [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
   - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
 
