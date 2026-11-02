@@ -132,6 +132,13 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - Terminal CLI (`codedna design`) printing structured optimization recommendations, severity ratings, and impact summaries.
   - Enhanced React Flow Architecture Graph with in-graph component search, match glow effects, and multi-protocol edge filtering (HTTPS, In-Memory, SQL/Storage, Async Event).
   - Interactive Architectural Optimization Engine in web dashboard with category/severity filters, tracking checklists, and impact analysis.
+- [x] **Task 5.6 — Function Call Graph Overhaul & Interactive Call Hierarchy Inspector:**
+  - Solved single-column 20,000px vertical stacking issue by introducing **Call Flow DAG layout** with topological depth leveling (Left ➔ Right: Callers ➔ Orchestrators ➔ Services ➔ Leaf Callees).
+  - Included struct methods alongside standalone functions in the function filter and tracked active `inDegree` / `outDegree` in API.
+  - Added **Interactive Call Hierarchy Focus & Trace Mode**: clicking any function highlights its direct callers in Emerald Green and direct callees in Sky Blue, dimming unrelated nodes.
+  - Built **Call Hierarchy Inspector Drawer** detailing callers, callees, complexity, and line locations with one-click focal hopping.
+  - Integrated full **Embedded Code Editor Viewer modal** with syntax highlighting and direct line jump from any graph node.
+  - Added **Package / Module isolation dropdown filter** and **Connected Only toggle** to eliminate visual clutter.
 - [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
   - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
 
