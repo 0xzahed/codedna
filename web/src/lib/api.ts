@@ -451,6 +451,16 @@ export interface DetectedPattern {
   tradeoffs: string;
 }
 
+export interface ArchRecommendation {
+  id: string;
+  title: string;
+  category: 'Decoupling' | 'Caching' | 'Resilience' | 'Scalability' | 'Modularity';
+  severity: 'high' | 'medium' | 'low';
+  description: string;
+  actionSteps: string[];
+  impact: string;
+}
+
 export interface SystemDesignReport {
   architectureStyle: string;
   summary: string;
@@ -459,6 +469,7 @@ export interface SystemDesignReport {
   detectedPatterns: DetectedPattern[];
   keyEntrypoints: string[];
   bottleneckHotspots: string[];
+  recommendations?: ArchRecommendation[];
   reliabilityScore: number;
 }
 
