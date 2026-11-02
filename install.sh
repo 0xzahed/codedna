@@ -182,11 +182,13 @@ fi
 
 # Determine target directory
 TARGET_DIR="${PWD}"
+prev=""
 for arg in "$@"; do
-    if [ "$arg" = "--repo" ]; then
-        TARGET_DIR="$2"
+    if [ "$prev" = "--repo" ]; then
+        TARGET_DIR="$arg"
         break
     fi
+    prev="$arg"
 done
 
 # Run container mounting current working directory to /workspace
