@@ -28,6 +28,7 @@ import {
   Radio, 
   ExternalLink, 
   Maximize2, 
+  Minimize2,
   RotateCcw, 
   Layers, 
   Share2, 
@@ -253,6 +254,7 @@ function ArchitectureDiagramGraphInner({
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedMermaid, setCopiedMermaid] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Compute tier matching status based on search query
   const tierSearchStats = useMemo(() => {
@@ -427,7 +429,11 @@ function ArchitectureDiagramGraphInner({
   };
 
   return (
-    <div className="relative w-full h-[720px] rounded-2xl border border-charcoal-750 bg-[#090b0e] overflow-hidden shadow-2xl flex flex-col">
+    <div className={`transition-all duration-200 border border-charcoal-750 bg-[#090b0e] overflow-hidden shadow-2xl flex flex-col ${
+      isFullscreen 
+        ? 'fixed inset-0 z-50 w-screen h-screen rounded-none' 
+        : 'relative w-full h-[850px] min-h-[750px] rounded-2xl'
+    }`}>
       {/* Canvas Top Bar */}
       <div className="z-10 bg-[#12151c]/95 backdrop-blur-md px-4 py-3 border-b border-charcoal-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
         {/* Left: Title & Search Bar */}
@@ -531,6 +537,16 @@ function ArchitectureDiagramGraphInner({
           >
             <Share2 className="w-3.5 h-3.5 text-dna-purple" />
             <span>Mermaid</span>
+          </button>
+
+          {/* Fullscreen Canvas Toggle */}
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-zinc-200 hover:text-white transition-all text-xs"
+            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand Canvas to Fullscreen"}
+          >
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-dna-blue" /> : <Maximize2 className="w-3.5 h-3.5 text-dna-blue" />}
+            <span>{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
         </div>
       </div>
