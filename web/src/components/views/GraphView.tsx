@@ -15,6 +15,7 @@ import ReactFlow, {
   ReactFlowProvider,
   EdgeProps,
   getBezierPath,
+  getSmoothStepPath,
 } from 'reactflow';
 import { useAppStore } from '../../lib/store';
 import { 
@@ -58,9 +59,20 @@ import {
 } from 'lucide-react';
 
 // ======================================================================
-// 1. NEON LIGHTING EDGE COMPONENT (Pulsing Electrical Glowing Wire)
+// 1. ELECTRON CIRCUIT EDGE COMPONENT (Dashed Circuit Line with Moving Electrons)
 // ======================================================================
-function NeonLightingEdge({
+interface ElectronCircuitEdgeData {
+  isFocused?: boolean;
+  isIncoming?: boolean;
+  isOutgoing?: boolean;
+  isDimmed?: boolean;
+  kind?: string;
+  label?: string;
+  wireRouting?: 'circuit' | 'smooth';
+  enableElectrons?: boolean;
+}
+
+const ElectronCircuitEdge = React.memo(function ElectronCircuitEdge({
   id,
   sourceX,
   sourceY,
@@ -69,50 +81,45 @@ function NeonLightingEdge({
   sourcePosition = Position.Right,
   targetPosition = Position.Left,
   data,
-}: EdgeProps) {
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    curvature: 0.32,
-  });
-
+}: EdgeProps<ElectronCircuitEdgeData>) {
   const isFocused = data?.isFocused;
   const isIncoming = data?.isIncoming;
   const isOutgoing = data?.isOutgoing;
-  const kind = data?.kind || 'calls';
   const isDimmed = data?.isDimmed;
+  const kind = data?.kind || 'calls';
+  const wireRouting = data?.wireRouting || 'circuit';
+  const enableElectrons = data?.enableElectrons !== false;
 
-  let glowColor = '#34d399'; // Emerald for standard call
-  let coreColor = '#6ee7b7';
-  let markerId = 'neon-marker-emerald';
+  let edgePath: string;
+  let labelX: number;
+  let labelY: number;
 
-  if (kind === 'imports') {
-    glowColor = '#c084fc'; // Purple for imports
-    coreColor = '#e9d5ff';
-    markerId = 'neon-marker-purple';
-  } else if (kind === 'cross_service_api') {
-    glowColor = '#38bdf8'; // Sky blue for API
-    coreColor = '#bae6fd';
-    markerId = 'neon-marker-cyan';
+  if (wireRouting === 'circuit') {
+    [edgePath, labelX, labelY] = getSmoothStepPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      borderRadius: 16,
+    });
+  } else {
+    const dx = Math.abs(targetX - sourceX);
+    const curvature = Math.min(0.35, Math.max(0.18, 120 / (dx + 1)));
+    [edgePath, labelX, labelY] = getBezierPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      curvature,
+    });
   }
 
-  // When focused, spotlight with electric colors
-  if (isFocused) {
-    if (isIncoming) {
-      glowColor = '#34d399'; // Bright emerald incoming
-      coreColor = '#ffffff';
-      markerId = 'neon-marker-white';
-    } else {
-      glowColor = '#38bdf8'; // Bright cyan outgoing
-      coreColor = '#ffffff';
-      markerId = 'neon-marker-white';
-    }
-  }
-
+  // When dimmed, render single minimalist faint dashed line without animations
+  // for maximum GPU/CPU performance during zoom & pan
   if (isDimmed) {
     return (
       <path
@@ -120,96 +127,140 @@ function NeonLightingEdge({
         fill="none"
         stroke="#272a33"
         strokeWidth={1}
+        strokeDasharray="4 4"
         strokeOpacity={0.12}
       />
     );
   }
 
-  const speed = isFocused ? '1.3s' : '2.6s';
-  const pulseRadius = isFocused ? 3.5 : 2.5;
+  // Determine line style and electron colors
+  let trackColor = '#475569'; // Muted dark circuit track
+  let trackOpacity = 0.35;
+  let electronColor = '#38bdf8'; // Cyan electron
+  let markerId = 'circuit-marker-muted';
+  let strokeDash = '6 4';
+  let strokeWidth = 1.4;
+
+  if (kind === 'imports') {
+    trackColor = '#7c3aed';
+    electronColor = '#c084fc';
+    markerId = 'circuit-marker-purple';
+    strokeDash = '4 4';
+    trackOpacity = 0.5;
+  } else if (kind === 'cross_service_api') {
+    trackColor = '#0284c7';
+    electronColor = '#38bdf8';
+    markerId = 'circuit-marker-cyan';
+    strokeDash = '6 3';
+    trackOpacity = 0.55;
+  }
+
+  // When focused, spotlight caller / callee paths
+  if (isFocused) {
+    strokeWidth = 2.2;
+    strokeDash = '6 3';
+    if (isIncoming) {
+      trackColor = '#10b981'; // Bright emerald incoming caller
+      electronColor = '#34d399';
+      markerId = 'circuit-marker-emerald';
+      trackOpacity = 0.95;
+    } else {
+      trackColor = '#06b6d4'; // Bright cyan outgoing callee
+      electronColor = '#38bdf8';
+      markerId = 'circuit-marker-cyan';
+      trackOpacity = 0.95;
+    }
+  }
+
+  const speed = isFocused ? '1.2s' : '2.8s';
+  const electronRadius = isFocused ? 2.5 : 2.0;
 
   return (
-    <g className="neon-lighting-edge group cursor-pointer">
-      {/* Layer 1: Ambient Neon Glow (Wide luminous blur halo) */}
+    <g className="electron-circuit-edge group cursor-pointer">
+      {/* Invisible wider hit area for easy hover and click interaction */}
       <path
         d={edgePath}
         fill="none"
-        stroke={glowColor}
-        strokeWidth={isFocused ? 8 : 4.5}
-        strokeOpacity={isFocused ? 0.75 : 0.35}
-        strokeLinecap="round"
-        style={{
-          filter: `drop-shadow(0 0 6px ${glowColor}) drop-shadow(0 0 12px ${glowColor})`,
-        }}
+        stroke="transparent"
+        strokeWidth={14}
+        className="cursor-pointer"
       />
 
-      {/* Layer 2: Core Electric Wire */}
+      {/* Layer 1: Dashed Circuit Wire Track (Kata Kata Line) */}
       <path
         id={id}
         d={edgePath}
         fill="none"
-        stroke={isFocused ? '#ffffff' : coreColor}
-        strokeWidth={isFocused ? 2.5 : 1.8}
+        stroke={trackColor}
+        strokeWidth={strokeWidth}
+        strokeDasharray={strokeDash}
+        strokeOpacity={trackOpacity}
         strokeLinecap="round"
-        strokeDasharray={kind === 'imports' ? '5,5' : undefined}
-        markerEnd={`url(#${isFocused ? 'neon-marker-white' : markerId})`}
-        style={{
-          filter: isFocused ? 'drop-shadow(0 0 5px #ffffff)' : undefined,
-        }}
+        markerEnd={`url(#${isFocused ? markerId : (kind === 'imports' ? 'circuit-marker-purple' : 'circuit-marker-muted')})`}
       />
 
-      {/* Layer 3: Live Electrical Light Pulse Particle */}
-      <circle 
-        r={pulseRadius} 
-        fill="#ffffff" 
-        style={{ 
-          filter: `drop-shadow(0 0 5px ${glowColor}) drop-shadow(0 0 8px #ffffff)` 
-        }}
-      >
-        <animateMotion dur={speed} repeatCount="indefinite" path={edgePath} />
-      </circle>
+      {/* Layer 2: Traveling Electron (Data Packet) */}
+      {enableElectrons && (
+        <g pointerEvents="none">
+          {/* Electron Glow Aura */}
+          <circle
+            r={electronRadius + 2.5}
+            fill={electronColor}
+            opacity={isFocused ? 0.65 : 0.4}
+          >
+            <animateMotion dur={speed} repeatCount="indefinite" path={edgePath} />
+          </circle>
 
-      {/* Secondary trailing particle on focused active wires */}
-      {isFocused && (
-        <circle 
-          r={pulseRadius * 0.75} 
-          fill={coreColor} 
-          style={{ 
-            filter: `drop-shadow(0 0 4px ${glowColor})` 
-          }}
-        >
-          <animateMotion dur={speed} begin="0.65s" repeatCount="indefinite" path={edgePath} />
-        </circle>
+          {/* High-energy white core */}
+          <circle
+            r={electronRadius}
+            fill="#ffffff"
+            opacity={isFocused ? 1 : 0.9}
+          >
+            <animateMotion dur={speed} repeatCount="indefinite" path={edgePath} />
+          </circle>
+
+          {/* Secondary trailing electron on focused active paths */}
+          {isFocused && (
+            <circle
+              r={electronRadius * 0.75}
+              fill={electronColor}
+              opacity={0.7}
+            >
+              <animateMotion dur={speed} begin="0.6s" repeatCount="indefinite" path={edgePath} />
+            </circle>
+          )}
+        </g>
       )}
 
-      {/* Optional Interactive Wire Label */}
+      {/* Optional Interactive Wire Label on focus */}
       {data?.label && (
         <text
           x={labelX}
-          y={labelY - 7}
-          fill={isFocused ? '#ffffff' : coreColor}
+          y={labelY - 6}
+          fill={isIncoming ? '#34d399' : '#38bdf8'}
           fontSize={10}
           fontFamily="monospace"
           fontWeight="bold"
           textAnchor="middle"
           className="select-none pointer-events-none"
-          style={{ filter: `drop-shadow(0 0 4px rgba(0,0,0,0.9))` }}
         >
           {data.label}
         </text>
       )}
     </g>
   );
-}
+});
 
 const edgeTypes = {
-  neonLighting: NeonLightingEdge,
+  neonLighting: ElectronCircuitEdge,
+  electronCircuit: ElectronCircuitEdge,
 };
 
 // ======================================================================
 // 2. CUSTOM GRAPH NODE COMPONENT (High-Tech Function & Symbol Card)
 // ======================================================================
-function CustomGraphNode({ data }: { data: any }) {
+const CustomGraphNode = React.memo(function CustomGraphNode({ data }: { data: any }) {
   const gn: GraphNode = data.node;
   const isFocused = data.isFocused;
   const isCaller = data.isCaller;
@@ -357,7 +408,7 @@ function CustomGraphNode({ data }: { data: any }) {
       </div>
     </div>
   );
-}
+});
 
 const nodeTypes = {
   customNode: CustomGraphNode,
@@ -467,6 +518,9 @@ export default function GraphView() {
   const [selectedLanguage, setSelectedLanguage] = useState<'all' | 'go' | 'typescript'>('all');
   const [selectedPackage, setSelectedPackage] = useState<string>('all');
   const [layoutMode, setLayoutMode] = useState<'dag' | 'domain' | 'grid'>('dag');
+  const [densityMode, setDensityMode] = useState<'core' | 'all'>('core');
+  const [wireRouting, setWireRouting] = useState<'circuit' | 'smooth'>('circuit');
+  const [enableElectrons, setEnableElectrons] = useState(true);
   const [connectedOnly, setConnectedOnly] = useState(true);
   const [hideTests, setHideTests] = useState(true);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
@@ -673,6 +727,16 @@ export default function GraphView() {
       filtered = filtered.filter((n) => (activeDegree.get(n.id) || 0) > 0 || n.id === focusedNodeId);
     }
 
+    // Density filter: In 'core' mode, focus on the architectural backbone (functions with degree >= 2, high complexity, or focused)
+    // This eliminates visual spaghetti while preserving key calling flows
+    if (densityMode === 'core' && selectedType === 'function' && !isolatedSubgraph && selectedPackage === 'all' && !search.trim()) {
+      filtered = filtered.filter((n) => {
+        const deg = activeDegree.get(n.id) || 0;
+        const totalConn = (n.data?.connections as number) || deg;
+        return deg >= 2 || totalConn >= 3 || (n.complexity || 0) > 8 || n.id === focusedNodeId || callerNodeIds.has(n.id) || calleeNodeIds.has(n.id);
+      });
+    }
+
     const finalNodeIds = new Set(filtered.map((n) => n.id));
     const finalEdges = validEdges.filter(
       (e) => finalNodeIds.has(e.source) && finalNodeIds.has(e.target)
@@ -830,7 +894,7 @@ export default function GraphView() {
       };
     });
 
-    // 5. Transform to React Flow Edges with Neon Lighting
+    // 5. Transform to React Flow Edges with Electron Circuit Traces
     const rfEdges: Edge[] = finalEdges.map((ge) => {
       const isConnectedToFocus = focusedNodeId === ge.source || focusedNodeId === ge.target;
       const isIncomingToFocus = focusedNodeId === ge.target;
@@ -842,13 +906,15 @@ export default function GraphView() {
         id: ge.id,
         source: ge.source,
         target: ge.target,
-        type: 'neonLighting',
+        type: 'electronCircuit',
         data: {
           isFocused: isConnectedToFocus,
           isIncoming: isIncomingToFocus,
           isOutgoing: isOutgoingFromFocus,
           isDimmed,
           kind: ge.kind,
+          wireRouting,
+          enableElectrons,
           label: hasFocus && isConnectedToFocus ? (isIncomingToFocus ? 'calls ➔' : '➔ invokes') : undefined,
         },
       };
@@ -863,6 +929,9 @@ export default function GraphView() {
     selectedLanguage,
     selectedPackage, 
     layoutMode, 
+    densityMode,
+    wireRouting,
+    enableElectrons,
     connectedOnly, 
     hideTests,
     focusedNodeId, 
@@ -891,9 +960,65 @@ export default function GraphView() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-charcoal-950 relative overflow-hidden select-none">
-      {/* Hidden SVG Definitions for Neon Glowing Arrowheads & Filters */}
+      {/* Hidden SVG Definitions for Neon & Circuit Arrowheads */}
       <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
         <defs>
+          <marker
+            id="circuit-marker-emerald"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981" />
+          </marker>
+          <marker
+            id="circuit-marker-cyan"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#06b6d4" />
+          </marker>
+          <marker
+            id="circuit-marker-purple"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#a855f7" />
+          </marker>
+          <marker
+            id="circuit-marker-muted"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#64748b" />
+          </marker>
+          <marker
+            id="circuit-marker-white"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ffffff" />
+          </marker>
+
           <marker
             id="neon-marker-emerald"
             viewBox="0 0 10 10"
@@ -1057,10 +1182,77 @@ export default function GraphView() {
             <Activity className="w-3.5 h-3.5" />
             <span>Connected</span>
           </button>
+
+          {/* Density Mode: Core Flow vs All Symbols */}
+          <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
+            <button
+              onClick={() => setDensityMode('core')}
+              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
+                densityMode === 'core'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Show architectural core flow (Clean & fast, removes spaghetti)"
+            >
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+              <span>Core Flow</span>
+            </button>
+            <button
+              onClick={() => setDensityMode('all')}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                densityMode === 'all'
+                  ? 'bg-dna-blue text-white font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Show all function symbols across the entire codebase"
+            >
+              <span>All Symbols</span>
+            </button>
+          </div>
         </div>
 
         {/* View Layout Controls & Export */}
         <div className="flex items-center gap-3">
+          {/* Wire Routing Style */}
+          <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
+            <button
+              onClick={() => setWireRouting('circuit')}
+              className={`px-2 py-1 rounded-md transition-all ${
+                wireRouting === 'circuit'
+                  ? 'bg-charcoal-700 text-white font-semibold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+              title="Circuit board 90-degree step wires with dashed traces"
+            >
+              Circuit Step
+            </button>
+            <button
+              onClick={() => setWireRouting('smooth')}
+              className={`px-2 py-1 rounded-md transition-all ${
+                wireRouting === 'smooth'
+                  ? 'bg-charcoal-700 text-white font-semibold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+              title="Smooth bezier curves"
+            >
+              Smooth Wave
+            </button>
+          </div>
+
+          {/* Electrons Animation Toggle */}
+          <button
+            onClick={() => setEnableElectrons(!enableElectrons)}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
+              enableElectrons
+                ? 'bg-sky-500/15 text-sky-300 border-sky-500/30 font-semibold'
+                : 'bg-charcoal-850 text-zinc-500 border-charcoal-750 hover:text-zinc-300'
+            }`}
+            title="Toggle animated traveling electrons along circuit tracks"
+          >
+            <Zap className={`w-3.5 h-3.5 ${enableElectrons ? 'text-sky-400' : 'text-zinc-600'}`} />
+            <span>Electrons</span>
+          </button>
+
           {/* Layout Mode Switcher */}
           <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
             <button
@@ -1187,8 +1379,16 @@ export default function GraphView() {
               onNodeClick={onNodeClick}
               fitView
               fitViewOptions={{ padding: 0.15 }}
-              minZoom={0.15}
-              maxZoom={2.2}
+              minZoom={0.06}
+              maxZoom={2.8}
+              zoomOnScroll={true}
+              zoomOnPinch={true}
+              panOnScroll={false}
+              panOnDrag={true}
+              preventScrolling={true}
+              nodeDragThreshold={1}
+              onlyRenderVisibleElements={true}
+              proOptions={{ hideAttribution: true }}
             >
               <Background color="#161820" gap={20} size={1} />
               <Controls className="!bg-[#14171e] !border-charcoal-700 !fill-zinc-300 !rounded-xl" />
@@ -1206,26 +1406,28 @@ export default function GraphView() {
           </ReactFlowProvider>
         )}
 
-        {/* Dynamic Neon Circuit Legend Toolbar */}
+        {/* Dynamic Circuit Track & Electron Legend Toolbar */}
         <div className="absolute bottom-4 left-4 z-10 pointer-events-auto hidden md:flex items-center gap-3 bg-[#14171e]/90 backdrop-blur-md px-3.5 py-2 rounded-xl border border-charcoal-700 text-[11px] font-mono text-zinc-300 shadow-xl">
           <span className="text-zinc-500 font-bold flex items-center gap-1">
             <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>Lighting Wires:</span>
+            <span>Circuit Flow:</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            <span>Caller Pulse (Incoming)</span>
+            <span className="w-3 h-0.5 border-b-2 border-dashed border-emerald-400" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>Caller Electron (In)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
-            <span>Callee Pulse (Outgoing)</span>
+            <span className="w-3 h-0.5 border-b-2 border-dashed border-sky-400" />
+            <span className="w-2 h-2 rounded-full bg-sky-400" />
+            <span>Callee Electron (Out)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
+            <span className="w-3 h-0.5 border-b-2 border-dashed border-purple-400" />
             <span>Import</span>
           </span>
           <span className="text-zinc-600">|</span>
-          <span className="text-zinc-400">Click any function to isolate its call path</span>
+          <span className="text-zinc-400">Click any symbol to isolate path</span>
         </div>
       </div>
 
