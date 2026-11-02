@@ -19,6 +19,17 @@
   <b>CodeDNA</b> is a lightning-fast, privacy-first software intelligence platform written in Go that constructs an interactive, living topological map of complex codebases. It combines <b>Tree-sitter AST parsing</b>, <b>cross-file call resolution</b>, <b>Tarjan's cycle detection</b>, <b>Git diff blast-radius propagation</b>, <b>architectural layer drift enforcement</b>, and a standalone <b>React Flow Web Intelligence Suite</b> with zero cloud dependencies.
 </p>
 
+> ⚡ **Zero-Clone Instant Quickstart (Run in ANY project folder without git clone):**
+>
+> ```bash
+> # 🐳 Docker 1-Liner (Zero-install, works everywhere)
+> docker run -d -p 8080:8080 -v $(pwd):/workspace ghcr.io/0xzahed/codedna:latest
+>
+> # ⚡ Native 1-Liner Installer (Linux & macOS)
+> curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash
+> ```
+> Then open **`http://localhost:8080`** in your browser!
+
 [⚡ Quick Start](#-quick-start) •
 [🎯 The Problem](#-the-problem) •
 [⚡ The CodeDNA Engine](#-the-codedna-engine-architecture) •
@@ -408,7 +419,34 @@ CodeDNA's multi-core parallel pipeline delivers industry-leading throughput by s
 
 ## 📦 Installation
 
-### Option 1: Pre-compiled Binaries (Recommended)
+### Option 1: Universal 1-Line Installer (Zero Clone)
+
+Install the standalone `codedna` binary natively onto Linux or macOS with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash
+```
+
+Once installed, simply `cd` to **any project directory** and run:
+```bash
+codedna serve
+```
+
+---
+
+### Option 2: Docker 1-Liner (Zero Clone, Zero Dependencies)
+
+No Go, Node, or compilers required. Run CodeDNA in any project folder using the official container image from GitHub Container Registry:
+
+```bash
+docker run -d -p 8080:8080 -v $(pwd):/workspace ghcr.io/0xzahed/codedna:latest
+```
+
+Open **`http://localhost:8080`** to interact with the live architecture map!
+
+---
+
+### Option 3: Pre-compiled Binaries (Recommended)
 
 Download the release binary matching your operating system and CPU architecture from the [GitHub Releases](https://github.com/0xzahed/codedna/releases) page:
 
@@ -430,13 +468,13 @@ curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-da
 sudo mv codedna /usr/local/bin/codedna
 ```
 
-### Option 2: Via Go Install
+### Option 4: Via Go Install
 
 ```bash
 go install github.com/0xzahed/codedna/cmd/codedna@latest
 ```
 
-### Option 3: Build from Source
+### Option 5: Build from Source
 
 ```bash
 git clone https://github.com/0xzahed/codedna.git
