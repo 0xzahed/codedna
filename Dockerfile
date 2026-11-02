@@ -24,4 +24,4 @@ COPY --from=web-builder /app/web/out /codedna-app/web/out
 
 EXPOSE 8080
 ENTRYPOINT ["codedna"]
-CMD ["serve", "--port", "8080"]
+CMD ["serve", "--port", "8080", "--repo", "/workspace"]
