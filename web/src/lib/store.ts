@@ -36,6 +36,8 @@ interface AppState {
   triggerRefresh: () => void;
   lastLiveUpdate: { message: string; timestamp: number } | null;
   setLastLiveUpdate: (update: { message: string; timestamp: number } | null) => void;
+  sidebarCollapsed: boolean;
+  toggleSidebar: () => void;
   theme: 'dark';
 }
 
@@ -72,5 +74,7 @@ export const useAppStore = create<AppState>((set) => ({
   triggerRefresh: () => set((state) => ({ refreshKey: state.refreshKey + 1 })),
   lastLiveUpdate: null,
   setLastLiveUpdate: (update) => set({ lastLiveUpdate: update }),
+  sidebarCollapsed: false,
+  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   theme: 'dark',
 }));
