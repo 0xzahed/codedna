@@ -400,7 +400,19 @@ func runServe(args []string) {
 	}
 	defer st.Close()
 
-	resolvedRepo, err := scanner.ResolveTarget(*repo)
+	targetPath := *repo
+	// Auto-detect container /workspace volume if running inside Docker
+	if targetPath == "/workspace" {
+		if fi, err := os.Stat("/workspace"); err != nil || !fi.IsDir() {
+			targetPath = "."
+		}
+	} else if targetPath == "." {
+		if fi, err := os.Stat("/workspace"); err == nil && fi.IsDir() {
+			targetPath = "/workspace"
+		}
+	}
+
+	resolvedRepo, err := scanner.ResolveTarget(targetPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Target resolution error: %v\n", err)
 		os.Exit(1)
@@ -417,7 +429,31 @@ func runServe(args []string) {
 
 	// Determine web dashboard assets
 	var webFS http.FileSystem
-	for _, dir := range []string{"web/out", "../web/out", "/codedna-app/web/out"} {
+	searchDirs := []string{
+		"web/out",
+		"../web/out",
+		"/codedna-app/web/out",
+		"/usr/local/share/codedna/web/out",
+	}
+	if envDir := os.Getenv("CODEDNA_WEB_DIR"); envDir != "" {
+		searchDirs = append([]string{envDir}, searchDirs...)
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		searchDirs = append(searchDirs,
+			filepath.Join(home, ".codedna", "web", "out"),
+			filepath.Join(home, ".codedna", "repo", "web", "out"),
+		)
+	}
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		searchDirs = append(searchDirs,
+			filepath.Join(execDir, "web", "out"),
+			filepath.Join(execDir, "..", "web", "out"),
+			filepath.Join(execDir, "..", "share", "codedna", "web", "out"),
+		)
+	}
+
+	for _, dir := range searchDirs {
 		if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
 			webFS = http.Dir(dir)
 			break
