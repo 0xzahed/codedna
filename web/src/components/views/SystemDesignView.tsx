@@ -4,12 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../../lib/store';
 import { 
   fetchSystemDesign, 
+  fetchFileContent,
   SystemDesignReport, 
   SystemTier, 
   DataFlowHop, 
   DetectedPattern,
   PatternCategory 
 } from '../../lib/api';
+import ArchitectureDiagramGraph from '../ArchitectureDiagramGraph';
+import CodeEditorViewer from '../CodeEditorViewer';
 import { 
   Workflow, 
   Layers, 
@@ -28,7 +31,9 @@ import {
   Code2, 
   Compass,
   FileCode,
-  Zap
+  Zap,
+  X,
+  Maximize2
 } from 'lucide-react';
 
 const TIER_ICONS: Record<string, React.ElementType> = {
@@ -86,6 +91,11 @@ export default function SystemDesignView() {
   const [selectedTier, setSelectedTier] = useState<SystemTier | null>(null);
   const [patternFilter, setPatternFilter] = useState<'All' | PatternCategory>('All');
   const [expandedHop, setExpandedHop] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'diagram' | 'breakdown'>('diagram');
+
+  // Code inspection in editor
+  const [inspectedFile, setInspectedFile] = useState<{ path: string; content: string } | null>(null);
+  const [loadingFile, setLoadingFile] = useState(false);
 
   const loadData = () => {
     setLoading(true);
@@ -104,6 +114,18 @@ export default function SystemDesignView() {
   useEffect(() => {
     loadData();
   }, [scanId]);
+
+  const handleOpenFile = async (filePath: string) => {
+    setLoadingFile(true);
+    try {
+      const data = await fetchFileContent(scanId, filePath);
+      setInspectedFile(data);
+    } catch (err) {
+      console.error('Failed to load file content:', err);
+    } finally {
+      setLoadingFile(false);
+    }
+  };
 
   const activeTiers = report?.tiers.filter((t) => t.fileCount > 0) || [];
 
@@ -133,6 +155,28 @@ export default function SystemDesignView() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 bg-charcoal-900 p-1 rounded-xl border border-charcoal-750 font-mono text-xs">
+            <button
+              onClick={() => setViewMode('diagram')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+                viewMode === 'diagram' ? 'bg-dna-blue text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Compass className="w-4 h-4" />
+              <span>Diagram Graph</span>
+            </button>
+            <button
+              onClick={() => setViewMode('breakdown')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+                viewMode === 'breakdown' ? 'bg-dna-blue text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Topology &amp; Patterns</span>
+            </button>
+          </div>
+
           <button
             onClick={loadData}
             disabled={loading}
@@ -181,324 +225,467 @@ export default function SystemDesignView() {
         </div>
       )}
 
-      {/* Tiers Visual Architecture Grid */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Layers className="w-5 h-5 text-dna-blue" />
-            <span>Multi-Tier Architecture Topology</span>
-          </h2>
-          <span className="text-xs text-zinc-400">Click a tier to inspect files &amp; key symbols</span>
+      {/* VIEW MODE 1: Interactive Architecture Diagram Graph */}
+      {viewMode === 'diagram' && report && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Compass className="w-5 h-5 text-dna-blue" />
+                <span>Architecture Diagram Flow Canvas</span>
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Drag tiers, inspect protocols, and click any component to open it in the code editor.
+              </p>
+            </div>
+            <span className="text-xs font-mono text-zinc-400">Animated Protocol Pipes • Interactive Nodes</span>
+          </div>
+
+          {/* Interactive React Flow Architecture Graph Canvas */}
+          <ArchitectureDiagramGraph 
+            report={report} 
+            onSelectTier={setSelectedTier} 
+            onOpenFile={handleOpenFile} 
+          />
+
+          {/* Selected Tier Inspection Drawer directly below diagram */}
+          {selectedTier && (
+            <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-6 space-y-5 shadow-lg">
+              <div className="flex items-center justify-between border-b border-charcoal-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-dna-blue border border-dna-blue/30">
+                    Tier {selectedTier.order} Inspection
+                  </span>
+                  <h4 className="text-base font-semibold text-white">{selectedTier.name}</h4>
+                </div>
+                <div className="text-xs font-mono text-zinc-400">
+                  {selectedTier.files?.length || 0} Files • {selectedTier.symbolCount} Symbols
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Files in Tier */}
+                <div>
+                  <h5 className="text-xs font-medium text-zinc-300 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
+                    <FileCode className="w-4 h-4 text-dna-blue" />
+                    <span>Component Files (Click to inspect in Editor)</span>
+                  </h5>
+                  <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-2 max-h-60 overflow-y-auto space-y-1">
+                    {selectedTier.files && selectedTier.files.length > 0 ? (
+                      selectedTier.files.map((file) => (
+                        <div 
+                          key={file} 
+                          onClick={() => handleOpenFile(file)}
+                          className="text-xs font-mono text-zinc-300 hover:text-white flex items-center justify-between py-1.5 px-2 rounded hover:bg-charcoal-850 cursor-pointer border-b border-charcoal-850/60 last:border-0 group transition-colors"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="text-zinc-600">/</span>
+                            <span className="truncate group-hover:text-dna-blue">{file}</span>
+                          </div>
+                          <span className="text-[10px] text-dna-blue opacity-0 group-hover:opacity-100 flex items-center gap-1 font-sans">
+                            <span>Open in Editor</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-xs text-zinc-500 py-3 text-center">No files classified in this tier.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Key Symbols in Tier */}
+                <div>
+                  <h5 className="text-xs font-medium text-zinc-300 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
+                    <Code2 className="w-4 h-4 text-emerald-400" />
+                    <span>Representative Symbols ({selectedTier.keySymbols?.length || 0})</span>
+                  </h5>
+                  <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 max-h-60 overflow-y-auto space-y-1.5">
+                    {selectedTier.keySymbols && selectedTier.keySymbols.length > 0 ? (
+                      selectedTier.keySymbols.map((sym) => (
+                        <div key={sym} className="text-xs font-mono text-emerald-300/90 py-1 border-b border-charcoal-850/60 last:border-0 flex items-center gap-2">
+                          <span className="text-emerald-500/50">ƒ</span>
+                          <span className="truncate">{sym}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-xs text-zinc-500 py-3 text-center">No symbols registered in this tier.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+      )}
 
-        {report && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {report.tiers.map((tier) => {
-              const Icon = TIER_ICONS[tier.id] || Layers;
-              const style = TIER_COLORS[tier.id] || {
-                bg: 'bg-zinc-800',
-                text: 'text-zinc-300',
-                border: 'border-zinc-700',
-                glow: 'hover:border-zinc-500',
-              };
-              const isSelected = selectedTier?.id === tier.id;
+      {/* VIEW MODE 2: Topology Cards & Pattern Recognition Gallery */}
+      {viewMode === 'breakdown' && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          {/* Tiers Visual Architecture Grid */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Layers className="w-5 h-5 text-dna-blue" />
+                <span>Multi-Tier Architecture Breakdown</span>
+              </h2>
+              <span className="text-xs text-zinc-400">Click a tier to inspect files &amp; key symbols</span>
+            </div>
 
-              return (
-                <div
-                  key={tier.id}
-                  onClick={() => setSelectedTier(tier)}
-                  className={`cursor-pointer rounded-xl p-5 border transition-all duration-200 ${
-                    isSelected
-                      ? `bg-charcoal-850 ${style.border} ring-1 ring-dna-blue/40 shadow-lg shadow-dna-blue/5`
-                      : `bg-charcoal-900 border-charcoal-750 ${style.glow} hover:bg-charcoal-850/60`
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg ${style.bg} border ${style.border} flex items-center justify-center ${style.text}`}>
-                        <Icon className="w-5 h-5" />
+            {report && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {report.tiers.map((tier) => {
+                  const Icon = TIER_ICONS[tier.id] || Layers;
+                  const style = TIER_COLORS[tier.id] || {
+                    bg: 'bg-zinc-800',
+                    text: 'text-zinc-300',
+                    border: 'border-zinc-700',
+                    glow: 'hover:border-zinc-500',
+                  };
+                  const isSelected = selectedTier?.id === tier.id;
+
+                  return (
+                    <div
+                      key={tier.id}
+                      onClick={() => setSelectedTier(tier)}
+                      className={`cursor-pointer rounded-xl p-5 border transition-all duration-200 ${
+                        isSelected
+                          ? `bg-charcoal-850 ${style.border} ring-1 ring-dna-blue/40 shadow-lg shadow-dna-blue/5`
+                          : `bg-charcoal-900 border-charcoal-750 ${style.glow} hover:bg-charcoal-850/60`
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg ${style.bg} border ${style.border} flex items-center justify-center ${style.text}`}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-charcoal-800 border border-charcoal-700 text-zinc-400">
+                                Tier {tier.order}
+                              </span>
+                              <h3 className="text-sm font-semibold text-white">{tier.name}</h3>
+                            </div>
+                            <div className="text-[11px] text-zinc-400 mt-1 flex items-center gap-3 font-mono">
+                              <span>{tier.fileCount} files</span>
+                              <span>•</span>
+                              <span>{tier.symbolCount} symbols</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
+
+                      <p className="text-xs text-zinc-400 mt-3 line-clamp-2 leading-relaxed">
+                        {tier.description}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Selected Tier Drill-down Drawer */}
+            {selectedTier && (
+              <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-6 mt-4 space-y-5">
+                <div className="flex items-center justify-between border-b border-charcoal-800 pb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-dna-blue border border-dna-blue/30">
+                      Tier {selectedTier.order} Inspection
+                    </span>
+                    <h4 className="text-base font-semibold text-white">{selectedTier.name}</h4>
+                  </div>
+                  <div className="text-xs font-mono text-zinc-400">
+                    {selectedTier.files?.length || 0} Files • {selectedTier.symbolCount} Symbols
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Files in Tier */}
+                  <div>
+                    <h5 className="text-xs font-medium text-zinc-300 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
+                      <FileCode className="w-4 h-4 text-dna-blue" />
+                      <span>Component Files (Click to inspect in Editor)</span>
+                    </h5>
+                    <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-2 max-h-56 overflow-y-auto space-y-1">
+                      {selectedTier.files && selectedTier.files.length > 0 ? (
+                        selectedTier.files.map((file) => (
+                          <div 
+                            key={file} 
+                            onClick={() => handleOpenFile(file)}
+                            className="text-xs font-mono text-zinc-300 hover:text-white flex items-center justify-between py-1.5 px-2 rounded hover:bg-charcoal-850 cursor-pointer border-b border-charcoal-850/60 last:border-0 group"
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="text-zinc-600">/</span>
+                              <span className="truncate group-hover:text-dna-blue">{file}</span>
+                            </div>
+                            <span className="text-[10px] text-dna-blue opacity-0 group-hover:opacity-100 flex items-center gap-1 font-sans">
+                              <span>Open in Editor</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-zinc-500 py-3 text-center">No files classified in this tier.</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Key Symbols in Tier */}
+                  <div>
+                    <h5 className="text-xs font-medium text-zinc-300 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
+                      <Code2 className="w-4 h-4 text-emerald-400" />
+                      <span>Representative Symbols ({selectedTier.keySymbols?.length || 0})</span>
+                    </h5>
+                    <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 max-h-56 overflow-y-auto space-y-1.5">
+                      {selectedTier.keySymbols && selectedTier.keySymbols.length > 0 ? (
+                        selectedTier.keySymbols.map((sym) => (
+                          <div key={sym} className="text-xs font-mono text-emerald-300/90 py-1 border-b border-charcoal-850/60 last:border-0 flex items-center gap-2">
+                            <span className="text-emerald-500/50">ƒ</span>
+                            <span className="truncate">{sym}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-zinc-500 py-3 text-center">No symbols registered in this tier.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* End-to-End Data Flow Pipeline */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Compass className="w-5 h-5 text-indigo-400" />
+                <span>End-to-End Data Flow &amp; Inter-Tier Protocols</span>
+              </h2>
+              <span className="text-xs text-zinc-400">Reconstructed from AST call graph edges</span>
+            </div>
+
+            {report && report.dataFlow.length > 0 ? (
+              <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl divide-y divide-charcoal-800 overflow-hidden">
+                {report.dataFlow.map((hop, idx) => {
+                  const isExpanded = expandedHop === idx;
+                  return (
+                    <div key={idx} className="p-4 hover:bg-charcoal-850/40 transition-colors">
+                      <div 
+                        onClick={() => setExpandedHop(isExpanded ? null : idx)}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-zinc-300 border border-charcoal-700 capitalize">
+                            {hop.fromTier.replace('_', ' ')}
+                          </span>
+                          <ArrowRight className="w-4 h-4 text-dna-blue shrink-0" />
+                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-zinc-300 border border-charcoal-700 capitalize">
+                            {hop.toTier.replace('_', ' ')}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+                            {hop.protocol}
+                          </span>
+                          <span className="text-xs font-mono font-bold text-white bg-charcoal-800 px-2 py-0.5 rounded border border-charcoal-700">
+                            {hop.callCount} calls
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Expandable Sample Calls */}
+                      {isExpanded && hop.sampleCalls && hop.sampleCalls.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-charcoal-800/80 pl-2">
+                          <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-2">Sample Cross-Boundary Invocations:</div>
+                          <div className="space-y-1">
+                            {hop.sampleCalls.map((call, cIdx) => (
+                              <div key={cIdx} className="text-xs font-mono text-zinc-300 bg-charcoal-950 px-3 py-1.5 rounded border border-charcoal-800">
+                                {call}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-8 text-center text-zinc-500 text-sm">
+                No cross-tier data flows detected in the current codebase graph.
+              </div>
+            )}
+          </div>
+
+          {/* Software Design Patterns Gallery */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-400" />
+                <span>Recognized Software Design Patterns</span>
+              </h2>
+
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1.5 bg-charcoal-900 p-1 rounded-lg border border-charcoal-750 text-xs font-medium">
+                {(['All', 'Architectural', 'Structural', 'Creational', 'Behavioral'] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setPatternFilter(cat)}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      patternFilter === cat
+                        ? 'bg-dna-blue text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredPatterns.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredPatterns.map((pat) => (
+                  <div
+                    key={pat.id}
+                    className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3 hover:border-charcoal-600 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-charcoal-800 border border-charcoal-700 text-zinc-400">
-                            Tier {tier.order}
+                          <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold border ${
+                            pat.category === 'Architectural' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                            pat.category === 'Structural' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                            pat.category === 'Creational' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                            'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                          }`}>
+                            {pat.category}
                           </span>
-                          <h3 className="text-sm font-semibold text-white">{tier.name}</h3>
-                        </div>
-                        <div className="text-[11px] text-zinc-400 mt-1 flex items-center gap-3 font-mono">
-                          <span>{tier.fileCount} files</span>
-                          <span>•</span>
-                          <span>{tier.symbolCount} symbols</span>
+                          <h3 className="text-sm font-semibold text-white">{pat.name}</h3>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <p className="text-xs text-zinc-400 mt-3 line-clamp-2 leading-relaxed">
-                    {tier.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Selected Tier Drill-down Drawer */}
-        {selectedTier && (
-          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-6 mt-4 space-y-5">
-            <div className="flex items-center justify-between border-b border-charcoal-800 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-dna-blue border border-dna-blue/30">
-                  Tier {selectedTier.order} Inspection
-                </span>
-                <h4 className="text-base font-semibold text-white">{selectedTier.name}</h4>
-              </div>
-              <div className="text-xs font-mono text-zinc-400">
-                {selectedTier.files?.length || 0} Files • {selectedTier.symbolCount} Symbols
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Files in Tier */}
-              <div>
-                <h5 className="text-xs font-medium text-zinc-300 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
-                  <FileCode className="w-4 h-4 text-dna-blue" />
-                  <span>Component Files ({selectedTier.files?.length || 0})</span>
-                </h5>
-                <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 max-h-56 overflow-y-auto space-y-1.5">
-                  {selectedTier.files && selectedTier.files.length > 0 ? (
-                    selectedTier.files.map((file) => (
-                      <div key={file} className="text-xs font-mono text-zinc-300 hover:text-white flex items-center gap-2 py-1 border-b border-charcoal-850/60 last:border-0">
-                        <span className="text-zinc-600">/</span>
-                        <span className="truncate">{file}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-xs text-zinc-500 py-3 text-center">No files classified in this tier.</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Key Symbols in Tier */}
-              <div>
-                <h5 className="text-xs font-medium text-zinc-300 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
-                  <Code2 className="w-4 h-4 text-emerald-400" />
-                  <span>Representative Symbols ({selectedTier.keySymbols?.length || 0})</span>
-                </h5>
-                <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 max-h-56 overflow-y-auto space-y-1.5">
-                  {selectedTier.keySymbols && selectedTier.keySymbols.length > 0 ? (
-                    selectedTier.keySymbols.map((sym) => (
-                      <div key={sym} className="text-xs font-mono text-emerald-300/90 py-1 border-b border-charcoal-850/60 last:border-0 flex items-center gap-2">
-                        <span className="text-emerald-500/50">ƒ</span>
-                        <span className="truncate">{sym}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-xs text-zinc-500 py-3 text-center">No symbols registered in this tier.</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* End-to-End Data Flow Pipeline */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Compass className="w-5 h-5 text-indigo-400" />
-            <span>End-to-End Data Flow &amp; Inter-Tier Protocols</span>
-          </h2>
-          <span className="text-xs text-zinc-400">Reconstructed from AST call graph edges</span>
-        </div>
-
-        {report && report.dataFlow.length > 0 ? (
-          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl divide-y divide-charcoal-800 overflow-hidden">
-            {report.dataFlow.map((hop, idx) => {
-              const isExpanded = expandedHop === idx;
-              return (
-                <div key={idx} className="p-4 hover:bg-charcoal-850/40 transition-colors">
-                  <div 
-                    onClick={() => setExpandedHop(isExpanded ? null : idx)}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-zinc-300 border border-charcoal-700 capitalize">
-                        {hop.fromTier.replace('_', ' ')}
-                      </span>
-                      <ArrowRight className="w-4 h-4 text-dna-blue shrink-0" />
-                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-charcoal-800 text-zinc-300 border border-charcoal-700 capitalize">
-                        {hop.toTier.replace('_', ' ')}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
-                        {hop.protocol}
-                      </span>
-                      <span className="text-xs font-mono font-bold text-white bg-charcoal-800 px-2 py-0.5 rounded border border-charcoal-700">
-                        {hop.callCount} calls
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Expandable Sample Calls */}
-                  {isExpanded && hop.sampleCalls && hop.sampleCalls.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-charcoal-800/80 pl-2">
-                      <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-2">Sample Cross-Boundary Invocations:</div>
-                      <div className="space-y-1">
-                        {hop.sampleCalls.map((call, cIdx) => (
-                          <div key={cIdx} className="text-xs font-mono text-zinc-300 bg-charcoal-950 px-3 py-1.5 rounded border border-charcoal-800">
-                            {call}
-                          </div>
-                        ))}
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-mono font-bold text-dna-blue">
+                          {(pat.confidence * 100).toFixed(0)}%
+                        </span>
+                        <span className="text-[10px] text-zinc-500 block">confidence</span>
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-8 text-center text-zinc-500 text-sm">
-            No cross-tier data flows detected in the current codebase graph.
-          </div>
-        )}
-      </div>
 
-      {/* Software Design Patterns Gallery */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" />
-            <span>Recognized Software Design Patterns</span>
-          </h2>
+                    <p className="text-xs text-zinc-300 leading-relaxed">
+                      {pat.description}
+                    </p>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 bg-charcoal-900 p-1 rounded-lg border border-charcoal-750 text-xs font-medium">
-            {(['All', 'Architectural', 'Structural', 'Creational', 'Behavioral'] as const).map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setPatternFilter(cat)}
-                className={`px-3 py-1 rounded-md transition-all ${
-                  patternFilter === cat
-                    ? 'bg-dna-blue text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {filteredPatterns.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredPatterns.map((pat) => (
-              <div
-                key={pat.id}
-                className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3 hover:border-charcoal-600 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold border ${
-                        pat.category === 'Architectural' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
-                        pat.category === 'Structural' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
-                        pat.category === 'Creational' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                        'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                      }`}>
-                        {pat.category}
-                      </span>
-                      <h3 className="text-sm font-semibold text-white">{pat.name}</h3>
+                    {/* Evidence List */}
+                    <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 space-y-1.5">
+                      <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Identified Evidence:</div>
+                      {pat.evidence.map((ev, eIdx) => (
+                        <div key={eIdx} className="text-xs text-zinc-300 flex items-start gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                          <span>{ev}</span>
+                        </div>
+                      ))}
                     </div>
+
+                    {/* Trade-offs */}
+                    {pat.tradeoffs && (
+                      <div className="text-xs text-zinc-400 border-t border-charcoal-800/80 pt-2.5">
+                        <span className="font-semibold text-zinc-300">Engineering Trade-offs: </span>
+                        <span>{pat.tradeoffs}</span>
+                      </div>
+                    )}
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-8 text-center text-zinc-500 text-sm">
+                No design patterns match the selected filter.
+              </div>
+            )}
+          </div>
 
-                  <div className="text-right shrink-0">
-                    <span className="text-xs font-mono font-bold text-dna-blue">
-                      {(pat.confidence * 100).toFixed(0)}%
-                    </span>
-                    <span className="text-[10px] text-zinc-500 block">confidence</span>
-                  </div>
-                </div>
-
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  {pat.description}
-                </p>
-
-                {/* Evidence List */}
-                <div className="bg-charcoal-950 border border-charcoal-800 rounded-lg p-3 space-y-1.5">
-                  <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Identified Evidence:</div>
-                  {pat.evidence.map((ev, eIdx) => (
-                    <div key={eIdx} className="text-xs text-zinc-300 flex items-start gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                      <span>{ev}</span>
+          {/* Architectural Bottleneck Hotspots & Key Entrypoints */}
+          {report && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Bottlenecks */}
+              <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span>Architectural Bottleneck &amp; Hotspot Diagnostics</span>
+                </h3>
+                <div className="space-y-2">
+                  {report.bottleneckHotspots.map((b, idx) => (
+                    <div
+                      key={idx}
+                      className={`text-xs p-3 rounded-lg border font-mono ${
+                        b.includes('Risk')
+                          ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                          : b.includes('Warning') || b.includes('Traffic')
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                          : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                      }`}
+                    >
+                      {b}
                     </div>
                   ))}
                 </div>
-
-                {/* Trade-offs */}
-                {pat.tradeoffs && (
-                  <div className="text-xs text-zinc-400 border-t border-charcoal-800/80 pt-2.5">
-                    <span className="font-semibold text-zinc-300">Engineering Trade-offs: </span>
-                    <span>{pat.tradeoffs}</span>
-                  </div>
-                )}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-8 text-center text-zinc-500 text-sm">
-            No design patterns match the selected filter.
-          </div>
-        )}
-      </div>
 
-      {/* Architectural Bottleneck Hotspots & Key Entrypoints */}
-      {report && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Bottlenecks */}
-          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span>Architectural Bottleneck &amp; Hotspot Diagnostics</span>
-            </h3>
-            <div className="space-y-2">
-              {report.bottleneckHotspots.map((b, idx) => (
-                <div
-                  key={idx}
-                  className={`text-xs p-3 rounded-lg border font-mono ${
-                    b.includes('Risk')
-                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
-                      : b.includes('Warning') || b.includes('Traffic')
-                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                  }`}
-                >
-                  {b}
+              {/* Key Entrypoints */}
+              <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-dna-blue" />
+                  <span>Primary Application Entrypoints</span>
+                </h3>
+                <div className="space-y-2">
+                  {report.keyEntrypoints.length > 0 ? (
+                    report.keyEntrypoints.map((ep, idx) => (
+                      <div key={idx} className="text-xs font-mono text-zinc-300 bg-charcoal-950 p-2.5 rounded border border-charcoal-800 flex items-center gap-2">
+                        <span className="text-dna-blue">➔</span>
+                        <span className="truncate">{ep}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-zinc-500 py-3">No entrypoints automatically detected.</div>
+                  )}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
+          )}
+        </div>
+      )}
 
-          {/* Key Entrypoints */}
-          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-dna-blue" />
-              <span>Primary Application Entrypoints</span>
-            </h3>
-            <div className="space-y-2">
-              {report.keyEntrypoints.length > 0 ? (
-                report.keyEntrypoints.map((ep, idx) => (
-                  <div key={idx} className="text-xs font-mono text-zinc-300 bg-charcoal-950 p-2.5 rounded border border-charcoal-800 flex items-center gap-2">
-                    <span className="text-dna-blue">➔</span>
-                    <span className="truncate">{ep}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs text-zinc-500 py-3">No entrypoints automatically detected.</div>
-              )}
+      {/* Full-Featured Embedded Code Editor Modal */}
+      {inspectedFile && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0f1217] border border-charcoal-700 rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="h-12 border-b border-charcoal-800 bg-[#141820] px-5 flex items-center justify-between shrink-0 select-none">
+              <div className="flex items-center gap-2 font-mono text-xs">
+                <FileCode className="w-4 h-4 text-dna-blue" />
+                <span className="text-white font-bold">{inspectedFile.path}</span>
+                <span className="text-zinc-500">• Code Editor View</span>
+              </div>
+
+              <button
+                onClick={() => setInspectedFile(null)}
+                className="p-1 rounded text-zinc-400 hover:text-white hover:bg-charcoal-750 transition-colors"
+                title="Close Editor (Esc)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Code Editor Body */}
+            <div className="flex-1 p-3 overflow-hidden bg-charcoal-950">
+              <CodeEditorViewer
+                filePath={inspectedFile.path}
+                content={inspectedFile.content}
+                targetLine={1}
+                maxHeight="h-full"
+              />
             </div>
           </div>
         </div>
