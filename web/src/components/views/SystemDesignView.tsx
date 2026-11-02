@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAppStore } from '../../lib/store';
 import { 
   fetchSystemDesign, 
@@ -9,7 +9,8 @@ import {
   SystemTier, 
   DataFlowHop, 
   DetectedPattern,
-  PatternCategory 
+  PatternCategory,
+  ArchRecommendation
 } from '../../lib/api';
 import ArchitectureDiagramGraph from '../ArchitectureDiagramGraph';
 import CodeEditorViewer from '../CodeEditorViewer';
@@ -29,11 +30,18 @@ import {
   Sparkles, 
   RotateCw, 
   Code2, 
-  Compass,
-  FileCode,
-  Zap,
-  X,
-  Maximize2
+  Compass, 
+  FileCode, 
+  Zap, 
+  X, 
+  Maximize2,
+  Lightbulb,
+  CheckSquare,
+  Square,
+  TrendingUp,
+  Sliders,
+  Filter,
+  Check
 } from 'lucide-react';
 
 const TIER_ICONS: Record<string, React.ElementType> = {
@@ -91,7 +99,12 @@ export default function SystemDesignView() {
   const [selectedTier, setSelectedTier] = useState<SystemTier | null>(null);
   const [patternFilter, setPatternFilter] = useState<'All' | PatternCategory>('All');
   const [expandedHop, setExpandedHop] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'diagram' | 'breakdown'>('diagram');
+  const [viewMode, setViewMode] = useState<'diagram' | 'breakdown' | 'recommendations'>('diagram');
+
+  // Optimization recommendations filter & action state
+  const [recSeverityFilter, setRecSeverityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [recCategoryFilter, setRecCategoryFilter] = useState<string>('all');
+  const [checkedActions, setCheckedActions] = useState<Record<string, boolean>>({});
 
   // Code inspection in editor
   const [inspectedFile, setInspectedFile] = useState<{ path: string; content: string } | null>(null);
@@ -127,12 +140,32 @@ export default function SystemDesignView() {
     }
   };
 
+  const toggleAction = (recId: string, idx: number) => {
+    const key = `${recId}-${idx}`;
+    setCheckedActions(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   const activeTiers = report?.tiers.filter((t) => t.fileCount > 0) || [];
 
   const filteredPatterns = (report?.detectedPatterns || []).filter((p) => {
     if (patternFilter === 'All') return true;
     return p.category === patternFilter;
   });
+
+  const recommendations = report?.recommendations || [];
+
+  const filteredRecs = useMemo(() => {
+    return recommendations.filter((r) => {
+      if (recSeverityFilter !== 'all' && r.severity !== recSeverityFilter) return false;
+      if (recCategoryFilter !== 'all' && r.category !== recCategoryFilter) return false;
+      return true;
+    });
+  }, [recommendations, recSeverityFilter, recCategoryFilter]);
+
+  const highSeverityRecs = recommendations.filter(r => r.severity === 'high');
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -148,7 +181,7 @@ export default function SystemDesignView() {
                 System Design &amp; Architecture Flow
               </h1>
               <p className="text-sm text-zinc-400 mt-0.5">
-                Multi-tier structural breakdown, protocol data flow hops, software pattern recognition, and architectural bottleneck detection.
+                Multi-tier structural breakdown, protocol data flow hops, pattern recognition, and architectural optimization engine.
               </p>
             </div>
           </div>
@@ -174,6 +207,22 @@ export default function SystemDesignView() {
             >
               <Layers className="w-4 h-4" />
               <span>Topology &amp; Patterns</span>
+            </button>
+            <button
+              onClick={() => setViewMode('recommendations')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all relative ${
+                viewMode === 'recommendations' ? 'bg-dna-blue text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Lightbulb className="w-4 h-4 text-amber-400" />
+              <span>Optimizations</span>
+              {recommendations.length > 0 && (
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                  highSeverityRecs.length > 0 ? 'bg-rose-500 text-white' : 'bg-charcoal-700 text-zinc-300'
+                }`}>
+                  {recommendations.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -212,15 +261,32 @@ export default function SystemDesignView() {
           </div>
 
           <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5">
-            <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider font-mono">Cross-Tier Flows</div>
-            <div className="text-2xl font-bold font-mono text-white mt-2">{report.dataFlow.length}</div>
-            <div className="text-xs text-zinc-500 mt-1">Inter-tier protocol communication hops</div>
-          </div>
-
-          <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-5">
             <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider font-mono">Recognized Patterns</div>
             <div className="text-2xl font-bold font-mono text-dna-blue mt-2">{report.detectedPatterns.length}</div>
             <div className="text-xs text-zinc-500 mt-1">Architectural, structural &amp; creational</div>
+          </div>
+
+          <div 
+            onClick={() => setViewMode('recommendations')}
+            className="bg-charcoal-900 border border-charcoal-750 hover:border-amber-500/50 rounded-xl p-5 cursor-pointer transition-all group"
+          >
+            <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider font-mono flex items-center justify-between">
+              <span>Optimization Actions</span>
+              <ArrowRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
+            </div>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold font-mono text-amber-400">
+                {recommendations.length}
+              </span>
+              <span className="text-xs text-zinc-400">improvements</span>
+            </div>
+            <div className="text-xs text-zinc-500 mt-1">
+              {highSeverityRecs.length > 0 ? (
+                <span className="text-rose-400 font-medium">{highSeverityRecs.length} high priority risk</span>
+              ) : (
+                <span>Boundary integrity validated</span>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -235,7 +301,7 @@ export default function SystemDesignView() {
                 <span>Architecture Diagram Flow Canvas</span>
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Drag tiers, inspect protocols, and click any component to open it in the code editor.
+                Drag tiers, search components, filter protocol pipes, and click any component to open it in the code editor.
               </p>
             </div>
             <span className="text-xs font-mono text-zinc-400">Animated Protocol Pipes • Interactive Nodes</span>
@@ -314,6 +380,38 @@ export default function SystemDesignView() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Quick recommendations callout card */}
+          {recommendations.length > 0 && (
+            <div className="bg-charcoal-900 border border-charcoal-750 hover:border-charcoal-600 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <Lightbulb className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <span>{recommendations.length} Architectural Optimization Recommendations Available</span>
+                    {highSeverityRecs.length > 0 && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                        {highSeverityRecs.length} High Priority
+                      </span>
+                    )}
+                  </h4>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Explore concrete implementation steps for boundary decoupling, storage caching, and asynchronous task offloading.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setViewMode('recommendations')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-dna-blue hover:bg-blue-600 text-xs font-semibold text-white transition-all shadow-md shrink-0"
+              >
+                <span>View Recommendations</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
         </div>
@@ -652,6 +750,174 @@ export default function SystemDesignView() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW MODE 3: Architectural Optimization Recommendations Engine */}
+      {viewMode === 'recommendations' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-charcoal-750 pb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2.5">
+                <Lightbulb className="w-5 h-5 text-amber-400" />
+                <span>Architectural Optimization &amp; Modernization Engine</span>
+              </h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                Concrete, high-impact recommendations to eliminate bottlenecks, decouple layer boundaries, and optimize scalability.
+              </p>
+            </div>
+
+            {/* Filter Toolbar */}
+            <div className="flex items-center gap-3 font-mono text-xs flex-wrap">
+              {/* Category Filter */}
+              <div className="flex items-center gap-1 bg-charcoal-900 p-1 rounded-lg border border-charcoal-750">
+                {(['all', 'Decoupling', 'Caching', 'Scalability', 'Modularity'] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setRecCategoryFilter(cat)}
+                    className={`px-2.5 py-1 rounded capitalize transition-all ${
+                      recCategoryFilter === cat ? 'bg-dna-blue text-white shadow-sm font-semibold' : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Severity Filter */}
+              <div className="flex items-center gap-1 bg-charcoal-900 p-1 rounded-lg border border-charcoal-750">
+                {(['all', 'high', 'medium', 'low'] as const).map((sev) => (
+                  <button
+                    key={sev}
+                    onClick={() => setRecSeverityFilter(sev)}
+                    className={`px-2 py-1 rounded capitalize transition-all ${
+                      recSeverityFilter === sev
+                        ? sev === 'high' ? 'bg-rose-500 text-white font-bold'
+                        : sev === 'medium' ? 'bg-amber-500 text-black font-bold'
+                        : sev === 'low' ? 'bg-blue-500 text-white font-bold'
+                        : 'bg-dna-blue text-white font-bold'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {sev}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Recommendations List */}
+          {filteredRecs.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5">
+              {filteredRecs.map((rec) => {
+                const completedCount = rec.actionSteps.filter((_, idx) => checkedActions[`${rec.id}-${idx}`]).length;
+                const isAllCompleted = completedCount === rec.actionSteps.length && rec.actionSteps.length > 0;
+
+                return (
+                  <div
+                    key={rec.id}
+                    className={`bg-charcoal-900 border rounded-xl p-6 space-y-4 transition-all shadow-lg ${
+                      rec.severity === 'high' ? 'border-rose-500/40 hover:border-rose-400/60' :
+                      rec.severity === 'medium' ? 'border-amber-500/40 hover:border-amber-400/60' :
+                      'border-charcoal-750 hover:border-charcoal-600'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span className={`text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-full font-bold border ${
+                            rec.severity === 'high' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
+                            rec.severity === 'medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                            'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                          }`}>
+                            {rec.severity} priority
+                          </span>
+
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-charcoal-800 text-zinc-300 border border-charcoal-700">
+                            {rec.category}
+                          </span>
+
+                          {isAllCompleted && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 font-semibold">
+                              <Check className="w-3 h-3" />
+                              <span>Plan Ready</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="text-base font-bold text-white mt-2">
+                          {rec.title}
+                        </h3>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-mono text-zinc-400">
+                          {completedCount} of {rec.actionSteps.length} Actions Checked
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Issue Description */}
+                    <p className="text-xs text-zinc-300 leading-relaxed font-sans bg-charcoal-950 p-3.5 rounded-lg border border-charcoal-800">
+                      {rec.description}
+                    </p>
+
+                    {/* Actionable Implementation Protocol */}
+                    <div className="space-y-2 pt-1">
+                      <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                        <Sliders className="w-3.5 h-3.5 text-dna-blue" />
+                        <span>Actionable Optimization Protocol (Click to track progress):</span>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {rec.actionSteps.map((step, idx) => {
+                          const isChecked = !!checkedActions[`${rec.id}-${idx}`];
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => toggleAction(rec.id, idx)}
+                              className={`flex items-start gap-3 p-2.5 rounded-lg border text-xs cursor-pointer transition-all select-none ${
+                                isChecked
+                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                  : 'bg-charcoal-950 border-charcoal-800 text-zinc-200 hover:border-charcoal-700 hover:bg-charcoal-850'
+                              }`}
+                            >
+                              <div className="mt-0.5 shrink-0">
+                                {isChecked ? (
+                                  <CheckSquare className="w-4 h-4 text-emerald-400" />
+                                ) : (
+                                  <Square className="w-4 h-4 text-zinc-500" />
+                                )}
+                              </div>
+                              <span className={`leading-relaxed ${isChecked ? 'line-through text-zinc-400' : ''}`}>
+                                {step}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Architectural Impact */}
+                    <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-lg p-3.5 flex items-start gap-3 text-xs text-emerald-300">
+                      <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold uppercase tracking-wider font-mono mr-1.5 text-emerald-400">Architectural Payoff:</span>
+                        <span>{rec.impact}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-charcoal-900 border border-charcoal-750 rounded-xl p-12 text-center text-zinc-400 space-y-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+              <h4 className="text-sm font-semibold text-white">No optimization warnings in this category!</h4>
+              <p className="text-xs text-zinc-500">All boundary rules and performance benchmarks in this filter passed cleanly.</p>
             </div>
           )}
         </div>
