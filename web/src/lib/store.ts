@@ -44,7 +44,7 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   activeTab: 'overview',
   setActiveTab: (tab) => set({ activeTab: tab }),
-  scanId: typeof window !== 'undefined' ? Number(localStorage.getItem('codedna_scan_id')) || 1 : 1,
+  scanId: typeof window !== 'undefined' ? (Number(localStorage.getItem('codedna_scan_id')) || 0) : 0,
   setScanId: (id) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('codedna_scan_id', id.toString());

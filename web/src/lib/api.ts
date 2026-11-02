@@ -232,55 +232,71 @@ export async function triggerScan(path?: string) {
   return res.json();
 }
 
-export async function fetchGraph(scanId: number = 1, params?: { type?: string; q?: string }): Promise<GraphData> {
+function resolveScanId(scanId?: number | string): string {
+  if (!scanId || scanId === 0 || scanId === 1 || scanId === 'latest') {
+    return 'latest';
+  }
+  return String(scanId);
+}
+
+export async function fetchGraph(scanId: number | string = 'latest', params?: { type?: string; q?: string }): Promise<GraphData> {
   const qs = new URLSearchParams();
   if (params?.type) qs.set('type', params.type);
   if (params?.q) qs.set('q', params.q);
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/graph?${qs.toString()}`);
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/graph?${qs.toString()}`);
   return res.json();
 }
 
-export async function fetchSymbols(scanId: number = 1, params?: { q?: string; kind?: string; file?: string }): Promise<SymbolItem[]> {
+export async function fetchSymbols(scanId: number | string = 'latest', params?: { q?: string; kind?: string; file?: string }): Promise<SymbolItem[]> {
   const qs = new URLSearchParams();
   if (params?.q) qs.set('q', params.q);
   if (params?.kind) qs.set('kind', params.kind);
   if (params?.file) qs.set('file', params.file);
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/symbols?${qs.toString()}`);
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/symbols?${qs.toString()}`);
   return res.json();
 }
 
-export async function fetchFiles(scanId: number = 1): Promise<FileItem[]> {
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/files`);
+export async function fetchFiles(scanId: number | string = 'latest'): Promise<FileItem[]> {
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/files`);
   return res.json();
 }
 
-export async function fetchFileContent(scanId: number = 1, path: string): Promise<{ path: string; content: string; size: number }> {
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/file?path=${encodeURIComponent(path)}`);
+export async function fetchFileContent(scanId: number | string = 'latest', path: string): Promise<{ path: string; content: string; size: number }> {
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/file?path=${encodeURIComponent(path)}`);
   return res.json();
 }
 
-export async function fetchIssues(scanId: number = 1): Promise<IssueItem[]> {
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/issues`);
+export async function fetchIssues(scanId: number | string = 'latest'): Promise<IssueItem[]> {
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/issues`);
   return res.json();
 }
 
-export async function fetchDependencies(scanId: number = 1) {
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/dependencies`);
+export async function fetchDependencies(scanId: number | string = 'latest') {
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/dependencies`);
   return res.json();
 }
 
-export async function fetchExportGraph(scanId: number = 1, format: 'mermaid' | 'c4' = 'mermaid'): Promise<{ format: string; content: string; repo: string }> {
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/export?format=${format}`);
+export async function fetchExportGraph(scanId: number | string = 'latest', format: 'mermaid' | 'c4' = 'mermaid'): Promise<{ format: string; content: string; repo: string }> {
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/export?format=${format}`);
   return res.json();
 }
 
-export async function fetchImpact(scanId: number = 1, base: string = 'main'): Promise<ImpactReport> {
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/impact?base=${encodeURIComponent(base)}`);
+export async function fetchImpact(scanId: number | string = 'latest', base: string = 'main'): Promise<ImpactReport> {
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/impact?base=${encodeURIComponent(base)}`);
   return res.json();
 }
 
-export async function fetchArchitecture(scanId: number = 1): Promise<ArchReport> {
-  const res = await fetch(`${API_BASE}/api/scans/${scanId}/architecture`);
+export async function fetchArchitecture(scanId: number | string = 'latest'): Promise<ArchReport> {
+  const targetId = resolveScanId(scanId);
+  const res = await fetch(`${API_BASE}/api/scans/${targetId}/architecture`);
   return res.json();
 }
 
