@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeDNA 🧬 | Local-First Software Architecture Intelligence Platform</title>
+  <meta name="description" content="Eliminate architectural drift. CodeDNA parses your source code with native Tree-sitter AST, maps living dependency and call graphs with electron pulses, enforces Clean Architecture guardrails, and analyzes Git blast radius 100% locally.">
+  <meta name="keywords" content="CodeDNA, Software Architecture, System Design, Code Analysis, AST Parser, Dependency Graph, Tree-sitter, Clean Architecture, Git Blast Radius, Developer Tools, Go, Open Source">
+  
+  <!-- Open Graph / Social Media Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://0xzahed.github.io/codedna/">
+  <meta property="og:title" content="CodeDNA 🧬 | Local-First Architecture Intelligence Platform">
+  <meta property="og:description" content="Understand your code. See its living DNA. Reverse engineer any codebase into an interactive architectural topology.">
+  <meta property="og:image" content="https://raw.githubusercontent.com/0xzahed/codedna/main/assets/linkedin/1_codedna_hero_banner.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20100%20100><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#080c15',
+              card: '#0e1424',
+              border: '#1e293b',
+              blue: '#38bdf8',
+              emerald: '#10b981',
+              purple: '#a855f7',
+              orange: '#f97316'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Glowing Gradients & Pulse Keyframes */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.04); }
+    }
+    .ambient-glow {
+      animation: pulseGlow 8s ease-in-out infinite;
+    }
+    .glass-card {
+      background: rgba(14, 20, 36, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+    }
+    .glass-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #ffffff 20%, #38bdf8 60%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .circuit-grid {
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+  </style>
+</head>
+
+<body class="bg-[#080c15] text-slate-200 font-sans antialiased selection:bg-sky-500 selection:text-white relative overflow-x-hidden">
+
+  <!-- Ambient Glowing Mesh Background -->
+  <div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+    <div class="ambient-glow absolute -top-[20%] left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-to-tr from-sky-600/20 via-purple-600/15 to-emerald-500/10 blur-[130px] rounded-full"></div>
+    <div class="ambient-glow absolute top-[50%] -left-[200px] w-[600px] h-[600px] bg-sky-600/10 blur-[140px] rounded-full"></div>
+    <div class="ambient-glow absolute bottom-[10%] -right-[200px] w-[600px] h-[600px] bg-emerald-600/10 blur-[140px] rounded-full"></div>
+  </div>
+
+  <!-- NAVIGATION HEADER -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#080c15]/85 border-b border-slate-800/80 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2.5 group">
+        <span class="text-2xl filter drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">🧬</span>
+        <span class="text-xl font-bold font-mono tracking-tight text-white group-hover:text-sky-400 transition-colors">CodeDNA</span>
+        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 font-semibold tracking-wide uppercase">v1.0.0</span>
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300">
+        <a href="#features" class="hover:text-sky-400 transition-colors">Features</a>
+        <a href="#interactive-tour" class="hover:text-sky-400 transition-colors">Architecture Tour</a>
+        <a href="#guardrails" class="hover:text-sky-400 transition-colors">Guardrails</a>
+        <a href="#polyglot" class="hover:text-sky-400 transition-colors">Supported Languages</a>
+        <a href="#install" class="hover:text-sky-400 transition-colors">Quickstart</a>
+      </nav>
+
+      <!-- Right CTAs -->
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/0xzahed/codedna" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 text-xs font-mono font-medium text-slate-200 hover:text-white transition-all shadow-sm">
+          <svg class="w-4 h-4 text-amber-400 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <span>Star on GitHub</span>
+        </a>
+        <a href="#install" class="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-semibold shadow-lg shadow-sky-500/20 transition-all hover:shadow-sky-500/40">
+          <span>Run Locally</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="relative pt-20 pb-16 md:pt-28 md:pb-24 px-4 sm:px-6 lg:px-8 circuit-grid">
+    <div class="max-w-5xl mx-auto text-center space-y-6">
+      
+      <!-- Top Pill -->
+      <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-400 text-xs font-mono font-medium shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Local-first • Native Tree-sitter AST • Zero Cloud Telemetry</span>
+      </div>
+
+      <!-- Main Headline -->
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.12]">
+        Stop Architectural Drift.<br>
+        <span class="gradient-text">See Your Codebase as Living DNA.</span>
+      </h1>
+
+      <!-- Subtitle -->
+      <p class="max-w-3xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
+        Reverse engineer any software repository into interactive topology. CodeDNA parses native Tree-sitter ASTs, visualizes function-to-function invocation graphs with active electron pulses, auto-classifies multi-tier system designs, and detects layer violations before pull requests merge.
+      </p>
+
+      <!-- Action Buttons -->
+      <div class="pt-4 flex flex-wrap items-center justify-center gap-4">
+        <a href="#install" class="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-sm shadow-xl shadow-sky-500/25 hover:shadow-sky-500/40 transition-all flex items-center gap-2">
+          <span>🐳 Quickstart with Docker</span>
+          <span class="text-xs opacity-75 font-mono">(Zero-Clone)</span>
+        </a>
+        <a href="https://github.com/0xzahed/codedna" target="_blank" rel="noopener noreferrer" class="px-6 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-white font-medium text-sm transition-all flex items-center gap-2">
+          <svg class="w-4 h-4 fill-current text-slate-300" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          <span>Explore Source Code</span>
+        </a>
+      </div>
+
+      <!-- Quick Command Copy Box -->
+      <div id="install" class="pt-6 max-w-2xl mx-auto">
+        <div class="rounded-xl border border-slate-800 bg-[#0c111e]/95 p-3 text-left shadow-2xl">
+          <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+              <span class="text-xs font-mono text-slate-400 pl-2">docker run (instant without git clone)</span>
+            </div>
+            <button onclick="copyCommand()" id="copyBtn" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 hover:text-white transition-all">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <span id="copyText">Copy</span>
+            </button>
+          </div>
+          <div class="font-mono text-xs sm:text-sm text-sky-300 overflow-x-auto whitespace-pre py-1" id="cmdSnippet">docker run -d -p 8080:8080 -v $(pwd):/workspace ghcr.io/0xzahed/codedna:latest</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- INTERACTIVE PRODUCT TOUR / SHOWCASE -->
+  <section id="interactive-tour" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div class="text-center space-y-3 mb-10">
+      <h2 class="text-xs font-mono font-bold tracking-widest text-sky-400 uppercase">Interactive Walkthrough</h2>
+      <h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Complete Codebase Transparency In 6 Views</h3>
+      <p class="text-slate-400 max-w-2xl mx-auto text-sm">Click each view below to see how CodeDNA turns static code into living architecture.</p>
+    </div>
+
+    <!-- Tour Navigation Pills -->
+    <div class="flex flex-wrap items-center justify-center gap-2 mb-8" id="tourTabs">
+      <button onclick="switchTab(0)" class="tab-btn px-4 py-2 rounded-lg text-xs font-mono font-medium transition-all bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm">
+        01 • Architecture Dashboard
+      </button>
+      <button onclick="switchTab(1)" class="tab-btn px-4 py-2 rounded-lg text-xs font-mono font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">
+        02 • Living Call Graph (Circuit Pulses)
+      </button>
+      <button onclick="switchTab(2)" class="tab-btn px-4 py-2 rounded-lg text-xs font-mono font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">
+        03 • Multi-Tier System Design
+      </button>
+      <button onclick="switchTab(3)" class="tab-btn px-4 py-2 rounded-lg text-xs font-mono font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">
+        04 • Git Blast-Radius Impact
+      </button>
+      <button onclick="switchTab(4)" class="tab-btn px-4 py-2 rounded-lg text-xs font-mono font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">
+        05 • Drift Guardrails
+      </button>
+      <button onclick="switchTab(5)" class="tab-btn px-4 py-2 rounded-lg text-xs font-mono font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">
+        06 • AST Symbol Explorer
+      </button>
+    </div>
+
+    <!-- Active Tour Showcase Frame -->
+    <div class="relative rounded-2xl overflow-hidden border border-slate-800 bg-[#0a0f1d] shadow-2xl group">
+      <!-- Top Chrome Bar -->
+      <div class="h-10 bg-[#0d1424] border-b border-slate-800 px-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-rose-500/70 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-500/70 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-500/70 inline-block"></span>
+          <span id="tabUrl" class="text-xs font-mono text-slate-400 pl-3">http://localhost:8080/</span>
+        </div>
+        <div class="text-[11px] font-mono text-sky-400" id="tabStatus">Core Flow DAG • High Precision AST</div>
+      </div>
+
+      <!-- Screenshot Display -->
+      <div class="relative aspect-[16/9] w-full overflow-hidden bg-black flex items-center justify-center">
+        <img id="tourImage" src="assets/Slide_1_Codebase_Intelligence_Dashboar.png" alt="CodeDNA Platform View" class="w-full h-full object-cover transition-all duration-300">
+      </div>
+
+      <!-- Caption Banner -->
+      <div class="p-4 sm:p-6 bg-[#0c1221] border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h4 id="tabTitle" class="text-base font-bold text-white font-mono">Codebase Intelligence Dashboard</h4>
+          <p id="tabDesc" class="text-xs sm:text-sm text-slate-400 mt-0.5">Deep AST parsing, dependency mapping, and health metrics for polyglot systems in seconds.</p>
+        </div>
+        <a href="https://github.com/0xzahed/codedna" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-mono text-sky-400 hover:text-sky-300 font-semibold shrink-0">
+          <span>Read Docs</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CORE SUPERPOWERS / FEATURES GRID -->
+  <section id="features" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div class="text-center space-y-3 mb-16">
+      <h2 class="text-xs font-mono font-bold tracking-widest text-emerald-400 uppercase">Architectural Intelligence</h2>
+      <h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Built For Engineers Who Value Architecture</h3>
+      <p class="text-slate-400 max-w-2xl mx-auto text-sm">Standard static analyzers report lint errors. CodeDNA models the entire systemic architecture of your software.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      
+      <!-- Card 1 -->
+      <div class="glass-card rounded-2xl p-6 space-y-3 transition-all hover:-translate-y-1">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-mono text-lg font-bold">
+          ⚡
+        </div>
+        <h4 class="text-base font-bold text-white font-mono">Native Tree-sitter AST</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Parses genuine Abstract Syntax Trees in parallel across Go, TypeScript, JavaScript, Python, Java, and PHP with zero regex approximations.
+        </p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="glass-card rounded-2xl p-6 space-y-3 transition-all hover:-translate-y-1">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center justify-center font-mono text-lg font-bold">
+          🧬
+        </div>
+        <h4 class="text-base font-bold text-white font-mono">Living Circuit Call Graphs</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Function-to-function invocation paths visualized as dashed circuit traces with real-time electron pulses that show the exact flow of execution.
+        </p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="glass-card rounded-2xl p-6 space-y-3 transition-all hover:-translate-y-1">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-mono text-lg font-bold">
+          🏛️
+        </div>
+        <h4 class="text-base font-bold text-white font-mono">Multi-Tier System Design</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Auto-classifies files into Presentation, Application, Domain, and Infrastructure tiers with automated sequence data-flow hop maps.
+        </p>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="glass-card rounded-2xl p-6 space-y-3 transition-all hover:-translate-y-1">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center font-mono text-lg font-bold">
+          🛡️
+        </div>
+        <h4 class="text-base font-bold text-white font-mono">Architectural Guardrails</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Enforce Clean & Hexagonal Architecture rules. Detect illegal dependencies and run `codedna check` in CI/CD to block PRs with violations.
+        </p>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="glass-card rounded-2xl p-6 space-y-3 transition-all hover:-translate-y-1">
+        <div class="w-10 h-10 rounded-xl bg-orange-500/15 text-orange-400 border border-orange-500/30 flex items-center justify-center font-mono text-lg font-bold">
+          💥
+        </div>
+        <h4 class="text-base font-bold text-white font-mono">Git Blast-Radius Impact</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Analyzes Git diffs to calculate downstream impact scores and show exactly which APIs, services, and modules are affected before merge.
+        </p>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="glass-card rounded-2xl p-6 space-y-3 transition-all hover:-translate-y-1">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center justify-center font-mono text-lg font-bold">
+          🔒
+        </div>
+        <h4 class="text-base font-bold text-white font-mono">100% Local-First & Private</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Zero cloud dependencies. Powered by embedded SQLite. Your intellectual property and proprietary source code never leave your machine.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- GUARDRAILS & CI/CD SECTION -->
+  <section id="guardrails" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-800/80">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      
+      <!-- Text Description -->
+      <div class="space-y-6">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono font-medium">
+          CI/CD Quality Gate
+        </div>
+        <h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
+          Prevent Spaghetti Code.<br>
+          Automate Architectural Enforcement.
+        </h3>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          Architectural rules are traditionally documented in static Confluence pages that get ignored. CodeDNA turns design guidelines into executable, testable assertions.
+        </p>
+
+        <ul class="space-y-3 font-mono text-xs text-slate-300">
+          <li class="flex items-center gap-2.5">
+            <span class="w-5 h-5 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">✓</span>
+            <span>Prevent Domain layers from importing Presentation or Infrastructure</span>
+          </li>
+          <li class="flex items-center gap-2.5">
+            <span class="w-5 h-5 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">✓</span>
+            <span>Detect and eliminate circular invocation cycles</span>
+          </li>
+          <li class="flex items-center gap-2.5">
+            <span class="w-5 h-5 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">✓</span>
+            <span>Export to Mermaid.js and C4 PlantUML for pull request docs</span>
+          </li>
+          <li class="flex items-center gap-2.5">
+            <span class="w-5 h-5 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">✓</span>
+            <span>Zero-exit failure in GitHub Actions on rule violation</span>
+          </li>
+        </ul>
+
+        <div class="pt-2">
+          <div class="rounded-xl border border-slate-800 bg-[#0c111e] p-3 text-xs font-mono text-slate-300 overflow-x-auto">
+            <span class="text-slate-500"># Run in CI before merging:</span><br>
+            <span class="text-emerald-400">codedna</span> check --max-violations 0 --fail-on-drift
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual Guardrail Preview -->
+      <div class="rounded-2xl border border-rose-500/30 overflow-hidden shadow-2xl bg-[#0e1424]">
+        <img src="assets/Slide_5_Architectural_Guardrails_and_L.png" alt="CodeDNA Guardrails Interface" class="w-full h-auto">
+      </div>
+
+    </div>
+  </section>
+
+  <!-- POLYGLOT SUPPORT MATRIX -->
+  <section id="polyglot" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-800/80">
+    <div class="text-center space-y-3 mb-14">
+      <h2 class="text-xs font-mono font-bold tracking-widest text-sky-400 uppercase">Polyglot Matrix</h2>
+      <h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Enterprise Multi-Language AST Analysis</h3>
+      <p class="text-slate-400 max-w-2xl mx-auto text-sm">Whether you run Go microservices, TypeScript Next.js apps, or Python data pipelines, CodeDNA handles them unified.</p>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      
+      <div class="glass-card rounded-xl p-4 text-center space-y-2">
+        <div class="text-2xl font-mono text-cyan-400 font-bold">Go</div>
+        <div class="text-[11px] font-mono text-slate-400">Tree-sitter Go</div>
+        <div class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 inline-block font-semibold">Tier-1 Native</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 text-center space-y-2">
+        <div class="text-2xl font-mono text-blue-400 font-bold">TypeScript</div>
+        <div class="text-[11px] font-mono text-slate-400">TS / TSX AST</div>
+        <div class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 inline-block font-semibold">Tier-1 Native</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 text-center space-y-2">
+        <div class="text-2xl font-mono text-amber-400 font-bold">JavaScript</div>
+        <div class="text-[11px] font-mono text-slate-400">ES6+ / React</div>
+        <div class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 inline-block font-semibold">Tier-1 Native</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 text-center space-y-2">
+        <div class="text-2xl font-mono text-sky-400 font-bold">Python</div>
+        <div class="text-[11px] font-mono text-slate-400">FastAPI / Django</div>
+        <div class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 inline-block font-semibold">Tier-1 Native</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 text-center space-y-2">
+        <div class="text-2xl font-mono text-red-400 font-bold">Java</div>
+        <div class="text-[11px] font-mono text-slate-400">Spring Boot / JVM</div>
+        <div class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 inline-block font-semibold">Tier-1 Native</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 text-center space-y-2">
+        <div class="text-2xl font-mono text-purple-400 font-bold">PHP</div>
+        <div class="text-[11px] font-mono text-slate-400">Laravel / Symfony</div>
+        <div class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 inline-block font-semibold">Tier-1 Native</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- INSTALLATION & GETTING STARTED OPTIONS -->
+  <section class="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-slate-800/80">
+    <div class="text-center space-y-3 mb-12">
+      <h2 class="text-xs font-mono font-bold tracking-widest text-emerald-400 uppercase">Deploy Anywhere</h2>
+      <h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Up and Running in 30 Seconds</h3>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Option 1: Docker -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🐳</span>
+            <h4 class="text-base font-bold text-white font-mono">Docker (Recommended)</h4>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">Zero Clone</span>
+        </div>
+        <p class="text-xs text-slate-400">Mount your current workspace directory directly into our container. Zero dependencies required.</p>
+        <div class="rounded-lg bg-black/60 p-3 font-mono text-xs text-sky-300 overflow-x-auto border border-slate-800">
+          docker run -d -p 8080:8080 \<br>
+          &nbsp;&nbsp;-v $(pwd):/workspace \<br>
+          &nbsp;&nbsp;ghcr.io/0xzahed/codedna:latest
+        </div>
+      </div>
+
+      <!-- Option 2: Linux / macOS Curl Installer -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">⚡</span>
+            <h4 class="text-base font-bold text-white font-mono">Native CLI Installer</h4>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">macOS / Linux</span>
+        </div>
+        <p class="text-xs text-slate-400">Installs pre-compiled universal binaries (Apple Silicon / Intel & Linux x86_64) into your system PATH.</p>
+        <div class="rounded-lg bg-black/60 p-3 font-mono text-xs text-emerald-300 overflow-x-auto border border-slate-800">
+          curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Web browser link -->
+    <div class="mt-8 text-center">
+      <p class="text-xs font-mono text-slate-400">
+        Once running, open your browser at: 
+        <a href="http://localhost:8080" target="_blank" class="text-sky-400 underline font-bold hover:text-sky-300">http://localhost:8080</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800 bg-[#060911] py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      
+      <!-- Logo & Bio -->
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🧬</span>
+        <div>
+          <div class="text-sm font-bold font-mono text-white">CodeDNA Platform</div>
+          <p class="text-xs text-slate-400">Open-source Software Architecture Intelligence. MIT Licensed.</p>
+        </div>
+      </div>
+
+      <!-- Author and Links -->
+      <div class="flex items-center gap-6 text-xs font-mono text-slate-400">
+        <a href="https://github.com/0xzahed/codedna" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">GitHub Repository</a>
+        <a href="https://github.com/0xzahed/codedna/releases" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">Releases</a>
+        <a href="https://github.com/0xzahed/codedna/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">MIT License</a>
+        <span class="text-slate-600">|</span>
+        <span>Built by <a href="https://github.com/0xzahed" target="_blank" class="text-sky-400 hover:underline">@0xzahed</a></span>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- SCRIPT FOR INTERACTIVE TOUR & CLIPBOARD -->
+  <script>
+    const TOURS = [
+      {
+        title: "Codebase Intelligence Dashboard",
+        desc: "Deep AST parsing, dependency mapping, and health metrics for polyglot systems in seconds.",
+        image: "assets/Slide_1_Codebase_Intelligence_Dashboar.png",
+        url: "http://localhost:8080/",
+        status: "78 Files • 513 AST Symbols • 0 Violations"
+      },
+      {
+        title: "Living Dependency & Function Call Graph",
+        desc: "Real-time invocation paths with dashed circuit traces and animated traveling electron pulses.",
+        image: "assets/Slide_2_Living_Dependency_and_Function.png",
+        url: "http://localhost:8080/graph/",
+        status: "Core Flow DAG • 142 Nodes • 158 Circuit Edges"
+      },
+      {
+        title: "Automated Multi-Tier System Design",
+        desc: "Auto-classifies components into Presentation, Application, Domain, and Infrastructure tiers.",
+        image: "assets/Slide_3_Automated_System_Design_and_Cl.png",
+        url: "http://localhost:8080/design/",
+        status: "Multi-Tier Topology • 4 Layers • Data-flow Hops"
+      },
+      {
+        title: "Git Blast-Radius Impact Analysis",
+        desc: "Calculates downstream risk scores and identifies impacted API routes before code hits production.",
+        image: "assets/Slide_4_Git_Blast-Radius_Impact_Analys.png",
+        url: "http://localhost:8080/impact/",
+        status: "Git Diff Detection • Downstream Risk Score: Low"
+      },
+      {
+        title: "Architectural Guardrails & Drift Governance",
+        desc: "Enforce strict dependency rules to prevent architectural drift as teams and codebases scale.",
+        image: "assets/Slide_5_Architectural_Guardrails_and_L.png",
+        url: "http://localhost:8080/architecture/",
+        status: "Clean Architecture Rules • 0 Active Violations"
+      },
+      {
+        title: "AST Symbol Explorer & Zero-Cloud Quickstart",
+        desc: "Runs 100% locally with embedded SQLite. Run with Docker or native one-line curl installer.",
+        image: "assets/Slide_6_AST_Symbol_Explorer_and_Zero-C.png",
+        url: "http://localhost:8080/explorer/",
+        status: "Embedded Monaco Editor • Direct Code Jump"
+      }
+    ];
+
+    function switchTab(index) {
+      const data = TOURS[index];
+      document.getElementById('tourImage').src = data.image;
+      document.getElementById('tabTitle').innerText = data.title;
+      document.getElementById('tabDesc').innerText = data.desc;
+      document.getElementById('tabUrl').innerText = data.url;
+      document.getElementById('tabStatus').innerText = data.status;
+
+      // Update active button styles
+      const buttons = document.querySelectorAll('.tab-btn');
+      buttons.forEach((btn, idx) => {
+        if (idx === index) {
+          btn.className = "tab-btn px-4 py-2 rounded-lg text-xs font-mono font-medium transition-all bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm";
+        } else {
+          btn.className = "tab-btn px-4 py-2 rounded-lg text-xs font-mono font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-white";
+        }
+      });
+    }
+
+    function copyCommand() {
+      const text = document.getElementById('cmdSnippet').innerText;
+      navigator.clipboard.writeText(text);
+      const copyText = document.getElementById('copyText');
+      copyText.innerText = "Copied!";
+      setTimeout(() => copyText.innerText = "Copy", 2000);
+    }
+  </script>
+
+</body>
+</html>
