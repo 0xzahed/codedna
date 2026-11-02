@@ -147,4 +147,42 @@ func TestResolveTarget(t *testing.T) {
 	if p != tmp {
 		t.Errorf("Expected %s, got %s", tmp, p)
 	}
+
+	// 4. Home directory protection
+	if home, herr := os.UserHomeDir(); herr == nil && home != "" {
+		_, err = ResolveTarget(home)
+		if err == nil {
+			t.Error("Expected error when resolving home directory directly")
+		}
+	}
+}
+
+func TestGitignoreAndBinaryFiltering(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create files
+	_ = os.WriteFile(filepath.Join(tmpDir, ".gitignore"), []byte("ignored_dir/\n*.secret.go\n"), 0o644)
+	_ = os.MkdirAll(filepath.Join(tmpDir, "ignored_dir"), 0o755)
+	_ = os.WriteFile(filepath.Join(tmpDir, "ignored_dir", "bad.go"), []byte("package bad\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "app.secret.go"), []byte("package secret\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "app.exe"), []byte("MZbinarydata"), 0o644)
+
+	sc := New()
+	res, err := sc.Scan(tmpDir, nil)
+	if err != nil {
+		t.Fatalf("Scan failed: %v", err)
+	}
+
+	for _, f := range res.Files {
+		if filepath.Base(f.Path) == "bad.go" {
+			t.Errorf("Expected bad.go in ignored_dir to be skipped by .gitignore")
+		}
+		if filepath.Base(f.Path) == "app.secret.go" {
+			t.Errorf("Expected app.secret.go to be skipped by .gitignore")
+		}
+		if filepath.Base(f.Path) == "app.exe" {
+			t.Errorf("Expected app.exe to be skipped by binary filter")
+		}
+	}
 }

@@ -23,19 +23,73 @@ var DefaultIgnore = map[string]bool{
 	".mypy_cache": true, ".pytest_cache": true, ".gradle": true,
 	"out": true, "bin": false, ".terraform": true, "site-packages": true,
 	"static_cdn": true, "static_serve": true, "staticfiles": true,
+	".turbo": true, ".dart_tool": true, "Pods": true, "DerivedData": true,
+	"obj": true, "bin/Debug": true, "bin/Release": true,
+}
+
+// binaryExts that should never be scanned as source code.
+var binaryExts = map[string]bool{
+	".exe": true, ".dll": true, ".so": true, ".dylib": true, ".bin": true,
+	".class": true, ".jar": true, ".war": true, ".ear": true,
+	".zip": true, ".tar": true, ".gz": true, ".tgz": true, ".bz2": true, ".xz": true, ".7z": true,
+	".iso": true, ".dmg": true, ".pkg": true, ".deb": true, ".rpm": true,
+	".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true, ".ico": true, ".bmp": true,
+	".mp4": true, ".mp3": true, ".mov": true, ".avi": true, ".mkv": true, ".wav": true,
+	".pdf": true, ".doc": true, ".docx": true, ".xls": true, ".xlsx": true, ".ppt": true,
+	".woff": true, ".woff2": true, ".ttf": true, ".eot": true, ".otf": true,
+	".db": true, ".sqlite": true, ".sqlite3": true, ".db-wal": true, ".db-shm": true,
+	".pyc": true, ".pyo": true, ".pyd": true,
+	".o": true, ".a": true, ".obj": true,
 }
 
 // language detection mapping: extension -> canonical language name.
 var extLangs = map[string]string{
-	".go": "go", ".py": "python", ".pyi": "python", ".js": "javascript",
-	".mjs": "javascript", ".cjs": "javascript", ".jsx": "javascript",
+	// Go
+	".go": "go",
+	// Python
+	".py": "python", ".pyi": "python",
+	// JavaScript & TypeScript
+	".js": "javascript", ".mjs": "javascript", ".cjs": "javascript", ".jsx": "javascript",
 	".ts": "typescript", ".mts": "typescript", ".cts": "typescript", ".tsx": "typescript",
-	".java": "java", ".php": "php",
+	// Java & Kotlin
+	".java": "java", ".kt": "kotlin", ".kts": "kotlin",
+	// PHP
+	".php": "php",
+	// C & C++
+	".c": "c", ".h": "c",
+	".cpp": "cpp", ".cc": "cpp", ".cxx": "cpp", ".hpp": "cpp", ".hh": "cpp", ".hxx": "cpp",
+	// C# / .NET
+	".cs": "csharp",
+	// Ruby
+	".rb": "ruby", ".rake": "ruby", ".gemspec": "ruby",
+	// Rust
+	".rs": "rust",
+	// Swift
+	".swift": "swift",
+	// Dart & Flutter
+	".dart": "dart",
+	// Web UI Frameworks
+	".vue": "vue", ".svelte": "svelte",
+	// Markup & Styles
+	".html": "html", ".htm": "html",
+	".css": "css", ".scss": "scss", ".sass": "sass", ".less": "less",
+	// Data & Queries
+	".sql": "sql",
+	".graphql": "graphql", ".gql": "graphql",
 }
 
 // ParsedLanguages are the languages this build of CodeDNA can parse with Tree-sitter.
 func ParsedLanguages() map[string]bool {
 	return map[string]bool{"go": true, "python": true, "javascript": true, "typescript": true, "java": true, "php": true}
+}
+
+// HeuristicLanguages are languages analyzed via reliable static regex heuristics.
+func HeuristicLanguages() map[string]bool {
+	return map[string]bool{
+		"c": true, "cpp": true, "csharp": true, "rust": true, "ruby": true,
+		"kotlin": true, "swift": true, "dart": true, "vue": true, "svelte": true,
+		"sql": true, "graphql": true,
+	}
 }
 
 // File language classification. Returns lang, isTest, accessErr-nil if skip.
@@ -171,7 +225,62 @@ func ResolveTarget(target string) (string, error) {
 		return "", fmt.Errorf("target path %s is not a directory", absRoot)
 	}
 
+	// Home Directory Protection: do not scan user's entire home directory by default
+	if os.Getenv("CODEDNA_ALLOW_HOME") != "1" {
+		if home, err := os.UserHomeDir(); err == nil && home != "" {
+			if filepath.Clean(absRoot) == filepath.Clean(home) {
+				return "", fmt.Errorf("safety guard: target path '%s' is your user home directory. CodeDNA is designed to scan project repositories. Please navigate to a project folder (e.g. 'cd my-project && codedna serve') or specify a project path (e.g. 'codedna serve --repo /path/to/project')", absRoot)
+			}
+		}
+	}
+
 	return absRoot, nil
+}
+
+func loadGitignore(root string) []string {
+	f, err := os.Open(filepath.Join(root, ".gitignore"))
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	var patterns []string
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		patterns = append(patterns, line)
+	}
+	return patterns
+}
+
+func matchesGitignore(relPath string, isDir bool, patterns []string) bool {
+	if len(patterns) == 0 {
+		return false
+	}
+	norm := filepath.ToSlash(relPath)
+	for _, p := range patterns {
+		p = strings.TrimSpace(p)
+		if p == "" || strings.HasPrefix(p, "#") {
+			continue
+		}
+		dirOnly := strings.HasSuffix(p, "/")
+		cleanP := strings.Trim(p, "/")
+		if dirOnly && !isDir {
+			continue
+		}
+		if norm == cleanP || strings.HasPrefix(norm, cleanP+"/") || strings.HasSuffix(norm, "/"+cleanP) || strings.Contains(norm, "/"+cleanP+"/") {
+			return true
+		}
+		if matched, _ := filepath.Match(cleanP, filepath.Base(norm)); matched {
+			return true
+		}
+		if matched, _ := filepath.Match(cleanP, norm); matched {
+			return true
+		}
+	}
+	return false
 }
 
 // Scan walks root and produces a ScanResult. It does not parse code.
@@ -197,6 +306,8 @@ func (s *Scanner) Scan(root string, progress ScanProgress) (*ScanResult, error) 
 	}
 	res.Git = git
 
+	gitignorePatterns := loadGitignore(absRoot)
+
 	count := 0
 	err = filepath.WalkDir(absRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -205,12 +316,12 @@ func (s *Scanner) Scan(root string, progress ScanProgress) (*ScanResult, error) 
 		rel, _ := filepath.Rel(absRoot, path)
 		parts := strings.Split(rel, string(filepath.Separator))
 		if d.IsDir() {
-			if s.shouldSkip(parts) {
+			if s.shouldSkip(parts) || matchesGitignore(rel, true, gitignorePatterns) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if s.shouldSkip(parts) {
+		if s.shouldSkip(parts) || matchesGitignore(rel, false, gitignorePatterns) {
 			return nil
 		}
 		base := filepath.Base(path)
@@ -218,6 +329,9 @@ func (s *Scanner) Scan(root string, progress ScanProgress) (*ScanResult, error) 
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(base))
+		if binaryExts[ext] {
+			return nil
+		}
 		size := int64(0)
 		if fi, fierr := d.Info(); fierr == nil {
 			size = fi.Size()
@@ -227,7 +341,11 @@ func (s *Scanner) Scan(root string, progress ScanProgress) (*ScanResult, error) 
 		lang, isLang := extLangs[ext]
 		isConfig := base == "go.mod" || base == "go.sum" || base == "requirements.txt" ||
 			base == "pyproject.toml" || base == "setup.py" || base == "package.json" ||
-			base == "composer.json" || base == "pom.xml" || base == "build.gradle" || base == "Cargo.toml"
+			base == "composer.json" || base == "pom.xml" || base == "build.gradle" ||
+			base == "build.gradle.kts" || base == "Cargo.toml" || base == "Gemfile" ||
+			base == "pubspec.yaml" || base == "Makefile" || base == "Dockerfile" ||
+			base == "docker-compose.yml" || base == "docker-compose.yaml" ||
+			strings.HasSuffix(base, ".csproj") || strings.HasSuffix(base, ".fsproj")
 		if !isLang && !isConfig {
 			return nil
 		}
