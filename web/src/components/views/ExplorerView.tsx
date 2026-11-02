@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../../lib/store';
 import { fetchFiles, fetchSymbols, fetchFileContent, FileItem, SymbolItem } from '../../lib/api';
+import CodeEditorViewer from '../CodeEditorViewer';
 import { 
   FolderTree, 
   FileCode, 
@@ -21,6 +22,7 @@ export default function ExplorerView() {
   const [symbols, setSymbols] = useState<SymbolItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
+  const [targetLine, setTargetLine] = useState<number>(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingContent, setLoadingContent] = useState(false);
@@ -70,7 +72,6 @@ export default function ExplorerView() {
   );
 
   const fileSymbols = (Array.isArray(symbols) ? symbols : []).filter((s) => s?.file === selectedFile?.path);
-  const codeLines = fileContent ? fileContent.split('\n') : [];
 
   return (
     <div className="h-[calc(100vh-4rem)] flex overflow-hidden">
@@ -154,7 +155,10 @@ export default function ExplorerView() {
                   {fileSymbols.map((sym) => (
                     <button
                       key={sym.id}
-                      onClick={() => setSelectedNode({ id: sym.id, type: sym.kind, label: sym.name, file: sym.file, line: sym.line, complexity: sym.complexity, exported: sym.exported })}
+                      onClick={() => {
+                        setTargetLine(sym.line);
+                        setSelectedNode({ id: sym.id, type: sym.kind, label: sym.name, file: sym.file, line: sym.line, complexity: sym.complexity, exported: sym.exported });
+                      }}
                       className="px-2.5 py-1 rounded-md bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-xs font-mono text-zinc-200 hover:text-white flex items-center gap-1.5 shrink-0 transition-all"
                     >
                       <Layers className="w-3 h-3 text-dna-purple" />
@@ -165,8 +169,8 @@ export default function ExplorerView() {
                 </div>
               )}
 
-              {/* Code viewer */}
-              <div className="flex-1 overflow-auto p-4 font-mono text-xs leading-relaxed select-text bg-charcoal-950">
+              {/* Code Editor Viewer */}
+              <div className="flex-1 overflow-hidden p-3 bg-charcoal-950">
                 {loadingContent ? (
                   <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs">
                     <div className="flex items-center gap-2">
@@ -174,17 +178,14 @@ export default function ExplorerView() {
                       <span>Loading source code...</span>
                     </div>
                   </div>
-                ) : codeLines.length > 0 ? (
-                  codeLines.map((line, idx) => (
-                    <div key={idx + 1} className="flex items-start hover:bg-charcoal-800/40 px-2 py-0.5 rounded">
-                      <span className="w-12 shrink-0 text-right pr-4 text-zinc-600 select-none text-[11px]">
-                        {idx + 1}
-                      </span>
-                      <pre className="flex-1 overflow-x-auto whitespace-pre font-mono text-[11px] text-zinc-300">
-                        {line || ' '}
-                      </pre>
-                    </div>
-                  ))
+                ) : fileContent ? (
+                  <CodeEditorViewer
+                    filePath={selectedFile.path}
+                    content={fileContent}
+                    targetLine={targetLine}
+                    language={selectedFile.language}
+                    maxHeight="h-full"
+                  />
                 ) : (
                   <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs">
                     File is empty or binary preview unavailable.
