@@ -149,6 +149,12 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - Expanded main view content containers across all pages (`SystemDesignView`, `ArchitectureView`, `OverviewView`, `DependencyView`, `ImpactView`, `RuntimeView`, `AIView`) from 1280px (`max-w-7xl`) to 1920px (`max-w-[1920px] w-full`).
   - Added collapsible sidebar toggle with icon-only mode (`w-16` vs `w-64`), yielding +200px of additional horizontal space for diagrams.
   - Increased `ArchitectureDiagramGraph` canvas height to 850px and integrated one-click Fullscreen expansion mode.
+- [x] **Task 5.9 — Zero-Clone 1-Line Installer, Docker Registry CI/CD & Quickstart:**
+  - Created universal `install.sh` bash installer script for Linux & macOS with platform/architecture auto-detection and zero git clone friction.
+  - Implemented multi-arch Docker image publication workflow `.github/workflows/docker.yml` targeting GitHub Container Registry (`ghcr.io/0xzahed/codedna:latest`).
+  - Added automated GitHub Actions CI test quality gate workflow `.github/workflows/ci.yml`.
+  - Added container volume auto-detection and comprehensive asset resolution paths in `cmd/codedna/main.go` and `Dockerfile`.
+  - Updated `README.md` with 1-line Docker (`docker run -d -p 8080:8080 -v $(pwd):/workspace ghcr.io/0xzahed/codedna:latest`) and Shell (`curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash`) instant launch commands.
 - [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
   - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
 
