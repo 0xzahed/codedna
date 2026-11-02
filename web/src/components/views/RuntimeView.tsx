@@ -64,7 +64,7 @@ export default function RuntimeView() {
   const comp = runtimeData?.comparison;
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 space-y-8 w-full max-w-[1920px] mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-charcoal-750 pb-6">
         <div>
