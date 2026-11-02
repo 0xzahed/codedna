@@ -177,4 +177,7 @@ func TestAnalyzeSystemDesign(t *testing.T) {
 	if report.ReliabilityScore <= 0 || report.ReliabilityScore > 100 {
 		t.Errorf("expected reliability score between 0 and 100, got %f", report.ReliabilityScore)
 	}
+	if len(report.Recommendations) == 0 {
+		t.Error("expected architectural recommendations to be generated")
+	}
 }
