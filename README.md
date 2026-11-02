@@ -5,7 +5,10 @@
 ### Living Software Intelligence, Dynamic Call Graphs & Architectural Topology Platform in Go
 #### The Open-Source Codebase Cartography Engine for Modern Engineering Teams
 
-[![CI](https://github.com/0xzahed/codedna/actions/workflows/ci.yml/badge.svg)](https://github.com/0xzahed/codedna/actions)
+[![CI](https://github.com/0xzahed/codedna/actions/workflows/ci.yml/badge.svg)](https://github.com/0xzahed/codedna/actions/workflows/ci.yml)
+[![Release Build](https://github.com/0xzahed/codedna/actions/workflows/release.yml/badge.svg)](https://github.com/0xzahed/codedna/actions/workflows/release.yml)
+[![Docker Image](https://github.com/0xzahed/codedna/actions/workflows/docker.yml/badge.svg)](https://github.com/0xzahed/codedna/actions/workflows/docker.yml)
+[![Latest Release](https://img.shields.io/github/v/release/0xzahed/codedna?color=brightgreen)](https://github.com/0xzahed/codedna/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/0xzahed/codedna)](https://goreportcard.com/report/github.com/0xzahed/codedna)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/0xzahed/codedna)](https://golang.org)
@@ -13,7 +16,6 @@
 [![React Flow](https://img.shields.io/badge/React_Flow-11.11-FF0072?logo=react)](https://reactflow.dev/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)](https://www.sqlite.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Release](https://img.shields.io/github/v/release/0xzahed/codedna?include_prereleases)](https://github.com/0xzahed/codedna/releases)
 
 <p align="center">
   <b>CodeDNA</b> is a lightning-fast, privacy-first software intelligence platform written in Go that constructs an interactive, living topological map of complex codebases. It combines <b>Tree-sitter AST parsing</b>, <b>cross-file call resolution</b>, <b>Tarjan's cycle detection</b>, <b>Git diff blast-radius propagation</b>, <b>architectural layer drift enforcement</b>, and a standalone <b>React Flow Web Intelligence Suite</b> with zero cloud dependencies.
@@ -68,7 +70,7 @@ Modern software codebases grow rapidly in scale and intricacy, making architectu
 CodeDNA provides an autonomous, multi-dimensional codebase intelligence engine engineered from first principles for extreme speed, precision, and zero-trust privacy:
 
 ### 1. High-Throughput Multi-Core AST Ingestion (22x Parallel Pipeline)
-Powered by native **Tree-sitter C bindings**, CodeDNA deploys an adaptive 16-worker pool with streaming channel pipelines across **Go, Python, TypeScript, JavaScript, Java, and PHP**. It extracts AST symbols (functions, classes, interfaces, methods, imports, and calls) with exact line/column byte offsets in milliseconds while automatically filtering non-source build artifacts (`dist`, `node_modules`, `staticfiles`, minified bundles).
+Powered by native **Tree-sitter C bindings** and resilient static parsers, CodeDNA deploys an adaptive 16-worker pool with streaming channel pipelines across **Go, Python, TypeScript, JavaScript, Java, PHP, Rust, C, C++, C#, Ruby, Kotlin, Swift, Dart, SQL, and GraphQL**. It extracts AST symbols (functions, classes, interfaces, structs, methods, imports, and calls) with exact line/column byte offsets in milliseconds while respecting `.gitignore` rules and automatically ignoring non-source build artifacts (`dist`, `node_modules`, `vendor`, `.venv`, binary files).
 
 ### 2. Cross-File Call & Import Resolution
 CodeDNA resolves symbolic references across disparate files with explicit confidence scoring (`exact-local`, `exact-module`, `exact-unique`, `module-qualified`, `self-method`). It tracks both direct AST imports and semantic invocation calls, enabling precise directory cluster grouping and directional dependency graphs.
@@ -82,11 +84,17 @@ Integrated directly with your Git workflow, CodeDNA compares your working tree o
 ### 5. Architectural Guardrail & Layer Drift Detection
 Define clean architectural contracts in `.codedna/architecture.json` (e.g. `domain` must never depend on `infra` or `controller`). CodeDNA evaluates all resolved dependencies against these rules, pinpoints boundary violations with line-accurate call chains, and computes a system-wide **Layer Health Score (0–100%)**.
 
-### 6. Multi-Repository Workspace & Cross-Service API Linker
+### 6. System Design Topology & Design Pattern Recognition Gallery
+CodeDNA automatically classifies repository components into **6 architectural tiers** (Client & Gateway, API Presentation, Domain Services, Persistence Storage, Async Messaging, External Integrations) and discovers classic **Gang of Four (GoF)** and distributed patterns (Clean Architecture, CQRS, Repository, Factory, Singleton, Pub-Sub, Middleware Pipelines) with confidence scoring and concrete code evidence.
+
+### 7. Multi-Repository Workspace & Cross-Service API Linker
 Microservice and full-stack systems span multiple repositories. CodeDNA scans frontend API invocations (`fetch`, `axios`) and backend route definitions (FastAPI, Django, Express, Next.js, Gin, Spring Boot), using route normalization and prefix matching to weave individual repositories into a unified full-stack architecture diagram.
 
-### 7. Native Mermaid & C4 Architecture Export
+### 8. Native Mermaid & C4 Architecture Export
 Transform living codebase topology into standard **Mermaid.js Flowcharts** (`flowchart TD`) and **C4 Component Diagrams** with a single click or CLI flag, perfect for markdown documentation, PR descriptions, and architectural RFCs.
+
+### 9. Production-Grade Safety & Port Conflict Management
+CodeDNA protects your system by blocking accidental scans of user home directories (`~` or `$HOME`) unless explicitly permitted via `--allow-home`. During `codedna serve`, synchronous TCP socket binding verifies port readiness before printing startup URLs, detects port collisions gracefully, binds to `127.0.0.1` by default for local privacy, and handles Ctrl+C termination smoothly.
 
 ---
 
@@ -96,7 +104,7 @@ Transform living codebase topology into standard **Mermaid.js Flowcharts** (`flo
 | :--- | :---: | :---: | :---: | :---: |
 | **100% Local-First & Zero Cloud Upload** | ❌ (Cloud/Server) | ❌ (Server setup) | ❌ (SaaS cloud) | **✅ (100% Offline / Local)** |
 | **Interactive Living Topology Canvas** | ❌ (Code search only)| ❌ (Static tables) | ✅ (Web app) | **✅ (React Flow + Hierarchical)** |
-| **Tree-sitter AST Multi-Language Parsing**| Partial | Partial (AST proprietary)| Proprietary | **✅ (Go, Py, TS, JS, Java, PHP)** |
+| **Polyglot AST & Symbol Parsing** | Partial | Partial (Proprietary AST) | Proprietary | **✅ (16+ Languages: Go, TS, JS, Py, Java, PHP, Rust, C/C++, C#, Ruby, Kotlin, Swift, Dart, SQL, GraphQL)** |
 | **Tarjan Circular Dependency Detection** | ❌ | ⚠️ (Limited metrics) | ❌ | **✅ (Tarjan SCC + Cycle Chains)** |
 | **Git Diff Blast-Radius Risk Scoring** | ❌ | ❌ | Partial | **✅ (AST-mapped Risk 0–100)** |
 | **Architectural Layer Drift Guardrails** | ❌ | ⚠️ (Config-heavy) | ❌ | **✅ (Declarative Layer Rules)** |
@@ -153,13 +161,16 @@ Parsing: [██═════════════════════�
 ## ✨ Features
 
 - ⚡ **22x Multi-Core Parallel Engine:** High-throughput AST ingestion using 16 concurrent worker routines to scan 15,000+ lines of code in under 1.5 seconds.
-- 🌳 **Multi-Language AST Precision:** Native Tree-sitter parsers for Go, Python, TypeScript, JavaScript, Java, and PHP with exact symbol spans and comment redaction.
+- 🌳 **Polyglot Code Coverage (16+ Languages):** Native Tree-sitter parsers (Go, Python, TypeScript, JavaScript, Java, PHP) and resilient static AST parsers (Rust, C, C++, C#, Ruby, Kotlin, Swift, Dart, SQL, GraphQL).
+- 🏛️ **Automated System Design Topology:** Categorizes code across 6 tiers (Client, API Presentation, Domain, Storage, Async Workers, Integrations) and discovers GoF design patterns (Clean Architecture, CQRS, Repository, Factory, Singleton, Pub-Sub, Middleware).
 - 🔄 **Tarjan Circular Dependency Analysis:** Pinpoints circular dependency chains with linear-time Strongly Connected Components (SCC) calculations.
 - 🎯 **Git Diff Blast Radius:** Quantifies the upstream caller and downstream callee blast radius of pending pull requests or working tree changes with a 0–100 risk score.
-- 🛡️ **Layer Drift & Architectural Guardrails:** Enforces clean separation of concerns (Domain, Application, Infrastructure, Presentation) with zero runtime performance penalties.
+- 🛡️ **Layer Drift & Architectural Guardrails:** Enforces clean separation of concerns (Domain, Application, Infrastructure, Presentation) with automated CI quality gate (`codedna check`).
+- 👥 **Team Knowledge Map & Bus Factor:** Parses git blame and numstat histories to identify line ownership distribution and single-contributor high-risk files.
 - 🌐 **Cross-Service Full-Stack Linking:** Discovers REST endpoints in backends and client-side HTTP calls in frontends, linking independent repositories into a composite graph.
 - 📐 **Instant Mermaid & C4 Export:** Render or export live architecture diagrams into GitHub-flavored Markdown or C4 component definitions.
-- 🔒 **Zero-Knowledge Privacy:** 100% offline, local SQLite embedded storage with zero remote telemetry, zero proprietary code leakage, and automatic token sanitization.
+- 🔒 **Zero-Knowledge Privacy & Safety:** 100% offline, local SQLite embedded storage with zero remote telemetry, automatic secret scrubbing, and home-directory guardrails.
+- 🚀 **Zero-Clone Native Installers:** Single-command curl and PowerShell installers with automated SHA256 checksum verification and binary self-updates.
 - 🖥️ **Full-Featured Web Intelligence Suite:** Built-in React Flow canvas with dark-mode Monaco code drawer, dependency manifest inspector, and runtime execution profiler.
 
 ---
@@ -170,19 +181,19 @@ Parsing: [██═════════════════════�
 
 | Command | Description | Needs Server? | Output Formats |
 | :--- | :--- | :--- | :---: |
-| `codedna serve [options]` | Launch REST API daemon and interactive React Flow Web Studio | ❌ No | HTTP (`127.0.0.1:8080`) |
+| `codedna serve [flags]` | Launch REST API daemon and interactive React Flow Web Studio | ❌ No | HTTP (`127.0.0.1:8080`) |
 | `codedna scan [path]` | Ingest directory and index AST symbols into SQLite | ❌ No | Console / JSON |
 | `codedna doctor` | Diagnose environment, installation health, ports & toolchains | ❌ No | Console Diagnostics |
 | `codedna install` | Self-installs standalone executable into user PATH (~/.local/bin) | ❌ No | System Config |
 | `codedna update` | Queries GitHub API for latest releases and self-updates | ❌ No | Network / Binary |
-| `codedna uninstall` | Safely removes CodeDNA binary and local database cache | ❌ No | Console |
-| `codedna docker [options]` | Runs CodeDNA inside an isolated Docker container | ❌ No | Container / Web |
+| `codedna uninstall [-y]` | Safely removes CodeDNA binary, web assets, and local cache | ❌ No | Console |
+| `codedna docker [flags]` | Runs CodeDNA inside an isolated container with volume mount | ❌ No | Container / Web |
+| `codedna check [flags]` | Automated CI/CD architecture quality gate & rule enforcement | ❌ No | Console / JSON |
+| `codedna design [--repo <path>]` | Reconstruct multi-tier system design, protocol flows & design patterns | ❌ No | Console / JSON |
+| `codedna blame, knowledge` | Analyzes git line ownership, team knowledge map & bus factor risk | ❌ No | Console / JSON |
 | `codedna analyze <path>` | Deep scan with Tarjan SCC cycles & layer drift verification | ❌ No | Console / JSON |
 | `codedna graph <path>` | Print connected symbol graph and dependency edges | ❌ No | Text / JSON |
 | `codedna impact [path]` | Calculate Git diff blast radius against target branch | ❌ No | Table / JSON |
-| `codedna design [--repo <path>]` | Reconstruct multi-tier system design, protocol flows & design patterns | ❌ No | Console / JSON |
-| `codedna check` | Automated CI/CD architecture quality gate & rule enforcement | ❌ No | Console / JSON |
-| `codedna blame, knowledge` | Analyzes git line ownership, team knowledge map & bus factor risk | ❌ No | Console / JSON |
 | `codedna report [path]` | Generate comprehensive markdown or JSON intelligence report | ❌ No | Markdown / JSON |
 | `codedna watch <path>` | Monitor directory for live file modifications and hot-reindex | ❌ No | Live Stream / SSE |
 | `codedna runtime enable` | Configure opt-in runtime instrumentation profiler | ❌ No | Middleware |
@@ -200,6 +211,12 @@ codedna scan .
 # Deep architectural analysis (detects circular cycles, layer violations, dead code)
 codedna analyze .
 
+# Automated CI/CD architecture quality gate
+codedna check --min-health 80 --max-cycles 0
+
+# Inspect System Design tiers and GoF design pattern gallery
+codedna design
+
 # Machine-readable JSON output for CI/CD integration
 codedna analyze . --json
 ```
@@ -215,7 +232,7 @@ Before submitting a Pull Request, evaluate which upstream callers and downstream
 codedna impact --base main
 
 # Compare against specific Git commit or release tag
-codedna impact --base v2.0.0 --json
+codedna impact --base v1.0.0 --json
 ```
 
 ---
@@ -223,11 +240,14 @@ codedna impact --base v2.0.0 --json
 ### 3. Launching the Interactive Web Intelligence Dashboard
 
 ```bash
-# Start server daemon on default port 8080
+# Start server daemon on default port 8080 (binds to 127.0.0.1)
 codedna serve
 
-# Start on custom port and target repository
-codedna serve --port 9000 --repo /path/to/project
+# Start on custom port and host without auto-opening browser
+codedna serve --port 8081 --host 0.0.0.0 --no-browser
+
+# Target a specific external repository
+codedna serve --repo /path/to/project
 ```
 Then navigate to **`http://localhost:8080`** in your browser.
 
@@ -251,12 +271,18 @@ curl -s http://localhost:8080/api/scans/latest/export?format=c4 > c4_components.
 
 | Flag | Applicable Commands | Description | Default |
 | :--- | :--- | :--- | :---: |
-| `--json` | `scan`, `analyze`, `graph`, `impact` | Output results in machine-readable structured JSON format | `false` |
+| `--port <num>` | `serve`, `docker` | HTTP port for the local REST API and Web Dashboard | `8080` |
+| `--host <ip>` | `serve` | Network bind address (`127.0.0.1` for local, `0.0.0.0` for LAN) | `127.0.0.1` |
+| `--no-browser` | `serve` | Do not attempt to automatically open browser on startup | `false` |
+| `--repo <path>` | `serve`, `watch`, `docker` | Repository root directory to bind and analyze | `.` |
+| `--allow-home` | `serve`, `scan`, `analyze` | Bypass safety guard to permit scanning user home directory | `false` |
+| `--min-health <num>`| `check` | Minimum layer health score required to pass CI gate | `80.0` |
+| `--max-cycles <num>`| `check` | Maximum circular dependency cycles allowed before failure | `0` |
+| `--max-violations` | `check` | Maximum boundary violations allowed before failure | `0` |
+| `--json` | `scan`, `analyze`, `graph`, `impact`, `check`, `design`, `blame` | Output results in machine-readable structured JSON format | `false` |
 | `--base <ref>` | `impact` | Target Git branch, commit SHA, or tag for diff calculation | `main` |
 | `--format <fmt>` | `report`, `export` | Output formatting profile (`markdown`, `json`, `mermaid`, `c4`) | `markdown` |
 | `--out <file>` | `report` | Destination file path for generated report | `stdout` |
-| `--port <num>` | `serve` | HTTP port for the local REST API and Web Dashboard | `8080` |
-| `--repo <path>` | `serve`, `watch` | Initial repository root directory to bind and monitor | `.` |
 | `--lang <type>` | `runtime` | Target runtime instrumentation adapter (`python`, `node`, `go`) | `python` |
 
 ---
@@ -458,24 +484,27 @@ This installs `codedna.exe` to `$HOME\.codedna\bin`, sets up your User PATH envi
 
 ### Option 3: Pre-compiled Binaries (GitHub Releases)
 
-Download the release archive matching your operating system and CPU architecture from the [GitHub Releases](https://github.com/0xzahed/codedna/releases) page:
+Download and unpack the release bundle matching your operating system and CPU architecture from the [GitHub Releases](https://github.com/0xzahed/codedna/releases) page:
 
 ```bash
 # Linux x86_64
-curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-linux-amd64.tar.gz | tar -xz
-mv bin/codedna ~/.local/bin/codedna
-
-# Linux ARM64
-curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-linux-arm64.tar.gz | tar -xz
-mv bin/codedna ~/.local/bin/codedna
+mkdir -p ~/.codedna ~/.local/bin
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-linux-amd64.tar.gz | tar -xz -C ~/.codedna
+ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
 
 # macOS Apple Silicon (M1/M2/M3/M4)
-curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-arm64.tar.gz | tar -xz
-mv bin/codedna ~/.local/bin/codedna
+mkdir -p ~/.codedna ~/.local/bin
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-arm64.tar.gz | tar -xz -C ~/.codedna
+ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
 
 # macOS Intel
-curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-amd64.tar.gz | tar -xz
-mv bin/codedna ~/.local/bin/codedna
+mkdir -p ~/.codedna ~/.local/bin
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-amd64.tar.gz | tar -xz -C ~/.codedna
+ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
+
+# Checksum Verification
+curl -sSLO https://github.com/0xzahed/codedna/releases/latest/download/SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS
 ```
 
 ---
@@ -555,51 +584,38 @@ powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.c
 codedna/
 ├── cmd/
 │   └── codedna/
-│       └── main.go                 # CLI entry point, argument parser, and command dispatcher
+│       ├── main.go                 # CLI entry point, argument parser, and command dispatcher
+│       ├── doctor.go               # Environment diagnostics, port availability & PATH checks
+│       ├── lifecycle.go            # Native installer, updater, and uninstaller routines
+│       └── docker.go               # Container runner wrapper and volume mount manager
 ├── internal/
 │   ├── ai/                         # Privacy-first local AI synthesis & prompt exporter
-│   │   ├── ai.go                   # Business logic classifier, Claude Code & Cursor exporter
-│   │   └── ai_test.go              # Privacy consent verification & context tests
-│   ├── analysis/                   # Graph algorithms & symbol dependency resolver
-│   │   ├── analysis.go             # Tarjan's SCC cycle detector, BFS reachability, dead code
-│   │   ├── graph.go                # Symbol and file-level graph node/edge constructors
-│   │   └── analysis_test.go        # Unit tests for SCC cycles and reachability
+│   ├── analysis/                   # Graph algorithms, Tarjan's SCC cycles & reachability
 │   ├── api/                        # Embedded HTTP REST & Server-Sent Events daemon
-│   │   ├── server.go               # Scan endpoints, file streaming, export handlers, SSE broker
-│   │   └── server_test.go          # API route integration tests
-│   ├── architecture/               # Architectural boundary & drift enforcement
-│   │   ├── architecture.go         # Declarative layer evaluator and health score calculator
-│   │   └── architecture_test.go    # Layer boundary violation test cases
-│   ├── engine/                     # Multi-core concurrent ingestion coordinator
-│   │   ├── engine.go               # 16-worker parallel AST pipeline and progress dispatcher
-│   │   └── engine_test.go          # Pipeline benchmarks and integration tests
-│   ├── impact/                     # Git diff blast-radius propagation engine
-│   │   ├── impact.go               # Diff line-to-symbol mapper and 0–100 risk scorer
-│   │   └── impact_test.go          # Blast radius and test selection verification
+│   ├── architecture/               # Architectural boundary & layer drift enforcement
+│   ├── blame/                      # Team knowledge distribution, line ownership & bus factor
+│   ├── engine/                     # Multi-core concurrent ingestion coordinator (16 workers)
+│   ├── impact/                     # Git diff blast-radius propagation engine (0–100 risk score)
 │   ├── model/                      # Strongly-typed domain models & data schemas
-│   │   └── model.go                # Node, Edge, Scan, Cycle, Impact, and Report structs
-│   ├── parser/                     # Polyglot Tree-sitter C bindings & AST extractors
-│   │   ├── parse.go                # Go, Python, TypeScript, JavaScript, Java, PHP extractors
+│   ├── parser/                     # Polyglot Tree-sitter & heuristic static AST extractors
+│   │   ├── parse.go                # Tree-sitter parsers (Go, Py, TS, JS, Java, PHP)
+│   │   ├── heuristic.go            # Static parsers (Rust, C/C++, C#, Ruby, Kotlin, Swift, SQL)
 │   │   └── spec.go                 # AST node extraction queries and capture rules
 │   ├── report/                     # Executive intelligence reports & diagram exporters
-│   │   ├── export.go               # Mermaid.js flowchart and C4 Component generators
-│   │   └── report.go               # Markdown and JSON executive summary builder
 │   ├── runtime/                    # Non-invasive runtime execution profiler
-│   │   └── runtime.go              # Trace ingest, microsecond metrics, static reconciliation
 │   ├── scanner/                    # Filesystem crawler, Git inspector & manifest auditor
-│   │   ├── dependencies.go         # Manifest parser (go.mod, package.json, requirements.txt)
+│   │   ├── dependencies.go         # Manifest parser & Git metadata extractor
 │   │   ├── frameworks.go           # Framework identifier (Next.js, FastAPI, Express, Django)
-│   │   └── scanner.go              # Local path & remote Git repository clone/resolve engine
+│   │   └── scanner.go              # Path resolver, gitignore filter & home directory guard
 │   ├── store/                      # Embedded SQLite persistent storage tier
-│   │   └── store.go                # Schema migrations, scans, graph cache, and index queries
-│   ├── watcher/                    # Live filesystem hot-reloader
-│   │   └── watcher.go              # Incremental file change tracker and live indexer
+│   ├── sysdesign/                  # Multi-tier topology classifier & GoF pattern recognizer
+│   ├── watcher/                    # Live filesystem hot-reloader & incremental indexer
 │   └── workspace/                  # Multi-repo & cross-service architectural linker
-│       └── workspace.go            # Frontend-to-backend REST route discovery and stitching
 ├── web/                            # Next.js 14 + React Flow 11 Interactive Web Dashboard
 │   ├── src/
-│   │   ├── app/                    # 9 specialized intelligence dashboard routes
+│   │   ├── app/                    # 10 specialized intelligence dashboard views
 │   │   │   ├── page.tsx            # Overview & System Health dashboard
+│   │   │   ├── design/page.tsx     # System Design & Multi-Tier Topology flow
 │   │   │   ├── graph/page.tsx      # React Flow interactive topological canvas
 │   │   │   ├── repo/page.tsx       # Monaco-style repository file tree & code inspector
 │   │   │   ├── dependencies/       # Dependency manifest matrix
@@ -609,6 +625,8 @@ codedna/
 │   │   │   ├── ai/page.tsx         # AI assistant & context export interface
 │   │   │   └── settings/page.tsx   # Multi-repo workspace switcher & engine config
 │   │   └── components/             # Reusable UI widgets, modals, and SourceDrawer
+├── install.sh                      # Zero-clone native installer for Linux & macOS
+├── install.ps1                     # Zero-clone native installer for Windows PowerShell
 ├── CHANGELOG.md                    # Chronological release log and feature history
 ├── CONTRIBUTING.md                 # Contribution standards and development guidelines
 ├── CODE_OF_CONDUCT.md              # Contributor Covenant v2.1 code of conduct
