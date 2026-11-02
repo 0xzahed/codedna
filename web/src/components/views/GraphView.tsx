@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   Node,
   Edge,
   MarkerType,
@@ -37,6 +38,7 @@ import {
   Flame, 
   AlertTriangle, 
   ZoomIn, 
+  ZoomOut,
   Download, 
   Copy, 
   Check, 
@@ -70,6 +72,8 @@ interface ElectronCircuitEdgeData {
   label?: string;
   wireRouting?: 'circuit' | 'smooth';
   enableElectrons?: boolean;
+  isAmbientKeyFlow?: boolean;
+  edgeVisibility?: 'smart' | 'focusOnly' | 'all';
 }
 
 const ElectronCircuitEdge = React.memo(function ElectronCircuitEdge({
@@ -89,6 +93,13 @@ const ElectronCircuitEdge = React.memo(function ElectronCircuitEdge({
   const kind = data?.kind || 'calls';
   const wireRouting = data?.wireRouting || 'circuit';
   const enableElectrons = data?.enableElectrons !== false;
+  const edgeVisibility = data?.edgeVisibility || 'smart';
+  const isAmbientKeyFlow = !!data?.isAmbientKeyFlow;
+
+  // In focusOnly mode, hide non-focused edges completely
+  if (edgeVisibility === 'focusOnly' && !isFocused) {
+    return null;
+  }
 
   let edgePath: string;
   let labelX: number;
@@ -125,55 +136,56 @@ const ElectronCircuitEdge = React.memo(function ElectronCircuitEdge({
       <path
         d={edgePath}
         fill="none"
-        stroke="#272a33"
+        stroke="#1e222b"
         strokeWidth={1}
         strokeDasharray="4 4"
-        strokeOpacity={0.12}
+        strokeOpacity={0.08}
       />
     );
   }
 
   // Determine line style and electron colors
-  let trackColor = '#475569'; // Muted dark circuit track
-  let trackOpacity = 0.35;
+  let trackColor = '#3b4252'; // Muted dark circuit track
+  let trackOpacity = 0.22;
   let electronColor = '#38bdf8'; // Cyan electron
   let markerId = 'circuit-marker-muted';
-  let strokeDash = '6 4';
-  let strokeWidth = 1.4;
+  let strokeDash = '4 4';
+  let strokeWidth = 1.1;
 
   if (kind === 'imports') {
     trackColor = '#7c3aed';
     electronColor = '#c084fc';
     markerId = 'circuit-marker-purple';
     strokeDash = '4 4';
-    trackOpacity = 0.5;
+    trackOpacity = 0.35;
   } else if (kind === 'cross_service_api') {
     trackColor = '#0284c7';
     electronColor = '#38bdf8';
     markerId = 'circuit-marker-cyan';
     strokeDash = '6 3';
-    trackOpacity = 0.55;
+    trackOpacity = 0.45;
   }
 
-  // When focused, spotlight caller / callee paths
+  // When focused (hovered or clicked), spotlight caller / callee paths
   if (isFocused) {
-    strokeWidth = 2.2;
+    strokeWidth = 2.4;
     strokeDash = '6 3';
     if (isIncoming) {
       trackColor = '#10b981'; // Bright emerald incoming caller
       electronColor = '#34d399';
       markerId = 'circuit-marker-emerald';
-      trackOpacity = 0.95;
+      trackOpacity = 1;
     } else {
       trackColor = '#06b6d4'; // Bright cyan outgoing callee
       electronColor = '#38bdf8';
       markerId = 'circuit-marker-cyan';
-      trackOpacity = 0.95;
+      trackOpacity = 1;
     }
   }
 
-  const speed = isFocused ? '1.2s' : '2.8s';
-  const electronRadius = isFocused ? 2.5 : 2.0;
+  const speed = isFocused ? '1.2s' : '3.0s';
+  const electronRadius = isFocused ? 2.5 : 1.8;
+  const shouldAnimateElectron = enableElectrons && (isFocused || isAmbientKeyFlow || edgeVisibility === 'all');
 
   return (
     <g className="electron-circuit-edge group cursor-pointer">
@@ -199,36 +211,34 @@ const ElectronCircuitEdge = React.memo(function ElectronCircuitEdge({
         markerEnd={`url(#${isFocused ? markerId : (kind === 'imports' ? 'circuit-marker-purple' : 'circuit-marker-muted')})`}
       />
 
-      {/* Layer 2: Traveling Electron (Data Packet) */}
-      {enableElectrons && (
-        <g pointerEvents="none">
-          {/* Electron Glow Aura */}
-          <circle
-            r={electronRadius + 2.5}
-            fill={electronColor}
-            opacity={isFocused ? 0.65 : 0.4}
-          >
+      {/* Layer 2: Traveling Electron (Data Packet) - Single motion path group */}
+      {shouldAnimateElectron && (
+        <g pointerEvents="none" className="electron-particle">
+          {/* Main Electron Core & Aura */}
+          <g>
             <animateMotion dur={speed} repeatCount="indefinite" path={edgePath} />
-          </circle>
-
-          {/* High-energy white core */}
-          <circle
-            r={electronRadius}
-            fill="#ffffff"
-            opacity={isFocused ? 1 : 0.9}
-          >
-            <animateMotion dur={speed} repeatCount="indefinite" path={edgePath} />
-          </circle>
-
-          {/* Secondary trailing electron on focused active paths */}
-          {isFocused && (
             <circle
-              r={electronRadius * 0.75}
+              r={electronRadius + 2.5}
               fill={electronColor}
-              opacity={0.7}
-            >
-              <animateMotion dur={speed} begin="0.6s" repeatCount="indefinite" path={edgePath} />
-            </circle>
+              opacity={isFocused ? 0.65 : 0.35}
+            />
+            <circle
+              r={electronRadius}
+              fill="#ffffff"
+              opacity={isFocused ? 1 : 0.85}
+            />
+          </g>
+
+          {/* Secondary trailing pulse only on active focused paths */}
+          {isFocused && (
+            <g>
+              <animateMotion dur={speed} begin="0.55s" repeatCount="indefinite" path={edgePath} />
+              <circle
+                r={electronRadius * 0.75}
+                fill={electronColor}
+                opacity={0.65}
+              />
+            </g>
           )}
         </g>
       )}
@@ -265,8 +275,10 @@ const CustomGraphNode = React.memo(function CustomGraphNode({ data }: { data: an
   const isFocused = data.isFocused;
   const isCaller = data.isCaller;
   const isCallee = data.isCallee;
+  const isHovered = data.isHovered;
   const isDimmed = data.isDimmed;
   const onSelect = data.onSelect;
+  const onHover = data.onHover;
   const onOpenFile = data.onOpenFile;
   const onIsolate = data.onIsolate;
 
@@ -286,13 +298,17 @@ const CustomGraphNode = React.memo(function CustomGraphNode({ data }: { data: an
     ringStyle = 'border-emerald-400 ring-2 ring-emerald-400/80 bg-[#102419] shadow-xl shadow-emerald-400/25';
   } else if (isCallee) {
     ringStyle = 'border-sky-400 ring-2 ring-sky-400/80 bg-[#0e1f2b] shadow-xl shadow-sky-400/25';
+  } else if (isHovered) {
+    ringStyle = 'border-dna-blue/80 ring-1 ring-dna-blue/50 bg-[#141a29] shadow-lg';
   }
 
   return (
     <div
       onClick={() => onSelect && onSelect(gn)}
-      className={`w-72 rounded-xl p-3.5 transition-all duration-200 cursor-pointer shadow-lg select-none ${ringStyle} ${
-        isDimmed ? 'opacity-25 hover:opacity-100' : 'opacity-100'
+      onMouseEnter={() => onHover && onHover(gn.id)}
+      onMouseLeave={() => onHover && onHover(null)}
+      className={`w-72 rounded-xl p-3.5 transition-[border-color,background-color,box-shadow,opacity] duration-150 cursor-grab active:cursor-grabbing shadow-lg select-none ${ringStyle} ${
+        isDimmed ? 'opacity-20 hover:opacity-100' : 'opacity-100'
       }`}
     >
       {/* React Flow Connection Handles on Left and Right for clean DAG flow */}
@@ -506,7 +522,8 @@ const DOMAIN_TIER_ORDER: Record<string, number> = {
 // ======================================================================
 // 4. MAIN GRAPH VIEW COMPONENT
 // ======================================================================
-export default function GraphView() {
+function GraphViewContent() {
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
   const { scanId, setSelectedNode, workspaceId, setWorkspaceId, refreshKey } = useAppStore();
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -521,11 +538,44 @@ export default function GraphView() {
   const [densityMode, setDensityMode] = useState<'core' | 'all'>('core');
   const [wireRouting, setWireRouting] = useState<'circuit' | 'smooth'>('circuit');
   const [enableElectrons, setEnableElectrons] = useState(true);
+  const [edgeVisibility, setEdgeVisibility] = useState<'smart' | 'focusOnly' | 'all'>('smart');
   const [connectedOnly, setConnectedOnly] = useState(true);
   const [hideTests, setHideTests] = useState(true);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [isolatedSubgraph, setIsolatedSubgraph] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // High performance interaction state: pauses SVG motion during active pan & zoom
+  const [isInteracting, setIsInteracting] = useState(false);
+  const interactionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startInteraction = useCallback(() => {
+    if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
+    setIsInteracting(true);
+  }, []);
+
+  const stopInteraction = useCallback(() => {
+    if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
+    interactionTimerRef.current = setTimeout(() => {
+      setIsInteracting(false);
+    }, 100);
+  }, []);
+
+  const handleHoverNode = useCallback((id: string | null) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setHoveredNodeId(id);
+    }, 25);
+  }, []);
+
+  const handleToggleIsolate = useCallback((isolate: boolean) => {
+    setIsolatedSubgraph(isolate);
+    setTimeout(() => {
+      fitView({ padding: 0.18, duration: 350, minZoom: 0.6, maxZoom: 1.0 });
+    }, 60);
+  }, [fitView]);
 
   // Embedded Code Editor modal
   const [inspectedFile, setInspectedFile] = useState<{ path: string; content: string; targetLine?: number } | null>(null);
@@ -620,33 +670,43 @@ export default function GraphView() {
     return Array.from(pkgs).sort();
   }, [graphData.nodes]);
 
-  // Compute Caller and Callee sets when a node is focused
-  const { callerNodeIds, calleeNodeIds, focusedNode } = useMemo(() => {
-    if (!focusedNodeId) {
-      return { callerNodeIds: new Set<string>(), calleeNodeIds: new Set<string>(), focusedNode: null };
+  // Active target is either clicked focus or active hover
+  const activeTargetId = focusedNodeId || hoveredNodeId;
+
+  // Compute Caller and Callee sets when a node is focused or hovered
+  const { callerNodeIds, calleeNodeIds, activeTargetNode, focusedNode } = useMemo(() => {
+    if (!activeTargetId) {
+      return { 
+        callerNodeIds: new Set<string>(), 
+        calleeNodeIds: new Set<string>(), 
+        activeTargetNode: null,
+        focusedNode: focusedNodeId ? (graphData.nodes || []).find((n) => n.id === focusedNodeId) || null : null
+      };
     }
     const callers = new Set<string>();
     const callees = new Set<string>();
 
     (graphData.edges || []).forEach((e) => {
-      if (e.target === focusedNodeId) {
+      if (e.target === activeTargetId) {
         callers.add(e.source);
       }
-      if (e.source === focusedNodeId) {
+      if (e.source === activeTargetId) {
         callees.add(e.target);
       }
     });
 
-    const target = (graphData.nodes || []).find((n) => n.id === focusedNodeId) || null;
-    return { callerNodeIds: callers, calleeNodeIds: callees, focusedNode: target };
-  }, [focusedNodeId, graphData]);
+    const activeNode = (graphData.nodes || []).find((n) => n.id === activeTargetId) || null;
+    const focNode = focusedNodeId ? (graphData.nodes || []).find((n) => n.id === focusedNodeId) || null : null;
+    return { callerNodeIds: callers, calleeNodeIds: callees, activeTargetNode: activeNode, focusedNode: focNode };
+  }, [activeTargetId, focusedNodeId, graphData]);
 
-  // Layout & React Flow graph computation
-  useEffect(() => {
+  // ----------------------------------------------------------------------
+  // STEP 1: Compute Base Filtered Nodes, Valid Edges, and Layout Positions
+  // (Memoized: DOES NOT recompute positions on hover or node selection!)
+  // ----------------------------------------------------------------------
+  const { filteredNodes, filteredEdges, positions } = useMemo(() => {
     if (!graphData.nodes || graphData.nodes.length === 0) {
-      setNodes([]);
-      setEdges([]);
-      return;
+      return { filteredNodes: [], filteredEdges: [], positions: new Map<string, { x: number; y: number }>() };
     }
 
     // 1. Initial Filtering
@@ -684,7 +744,6 @@ export default function GraphView() {
       const pkgNodeIds = new Set(
         filtered.filter((n) => n.file && n.file.startsWith(selectedPackage)).map((n) => n.id)
       );
-      // Keep package nodes + direct boundary callers & callees
       const boundaryNodeIds = new Set<string>();
       (graphData.edges || []).forEach((e) => {
         if (pkgNodeIds.has(e.source)) boundaryNodeIds.add(e.target);
@@ -728,12 +787,11 @@ export default function GraphView() {
     }
 
     // Density filter: In 'core' mode, focus on the architectural backbone (functions with degree >= 2, high complexity, or focused)
-    // This eliminates visual spaghetti while preserving key calling flows
     if (densityMode === 'core' && selectedType === 'function' && !isolatedSubgraph && selectedPackage === 'all' && !search.trim()) {
       filtered = filtered.filter((n) => {
         const deg = activeDegree.get(n.id) || 0;
         const totalConn = (n.data?.connections as number) || deg;
-        return deg >= 2 || totalConn >= 3 || (n.complexity || 0) > 8 || n.id === focusedNodeId || callerNodeIds.has(n.id) || calleeNodeIds.has(n.id);
+        return deg >= 2 || totalConn >= 3 || (n.complexity || 0) > 8 || n.id === focusedNodeId;
       });
     }
 
@@ -743,11 +801,9 @@ export default function GraphView() {
     );
 
     // 3. Compute Positions based on selected Layout Mode
-    const positions = new Map<string, { x: number; y: number }>();
+    const posMap = new Map<string, { x: number; y: number }>();
 
     if (isolatedSubgraph && focusedNodeId) {
-      // Clean 3-tier Focal Subgraph Layout:
-      // Left: Callers (Incoming) ➔ Center: Target Function ➔ Right: Callees (Outgoing)
       const callersList = filtered.filter((n) => callerNodeIds.has(n.id));
       const calleesList = filtered.filter((n) => calleeNodeIds.has(n.id));
       const targetList = filtered.filter((n) => n.id === focusedNodeId);
@@ -755,23 +811,19 @@ export default function GraphView() {
       const maxH = Math.max(callersList.length, calleesList.length, 1);
       const centerY = (maxH * 140) / 2 + 50;
 
-      // Position Target in center
       targetList.forEach((gn) => {
-        positions.set(gn.id, { x: 420, y: centerY });
+        posMap.set(gn.id, { x: 420, y: centerY });
       });
 
-      // Position Callers on left
       callersList.forEach((gn, idx) => {
-        positions.set(gn.id, { x: 60, y: idx * 140 + 70 });
+        posMap.set(gn.id, { x: 60, y: idx * 140 + 70 });
       });
 
-      // Position Callees on right
       calleesList.forEach((gn, idx) => {
-        positions.set(gn.id, { x: 780, y: idx * 140 + 70 });
+        posMap.set(gn.id, { x: 780, y: idx * 140 + 70 });
       });
 
     } else if (layoutMode === 'dag') {
-      // Topological Level DAG layout with Sub-Column Wrapping (Prevents 30,000px towers!)
       const { levels } = computeCallDagLevels(filtered, finalEdges);
       const levelBuckets = new Map<number, GraphNode[]>();
 
@@ -781,7 +833,6 @@ export default function GraphView() {
         levelBuckets.get(lvl)!.push(gn);
       });
 
-      // Sort each level by package and complexity
       levelBuckets.forEach((bucket) => {
         bucket.sort((a, b) => {
           const pkgA = a.file ? a.file.split('/').slice(0, 2).join('/') : '';
@@ -806,14 +857,13 @@ export default function GraphView() {
           const row = idx % MAX_ROWS_PER_COL;
           const x = currentX + subCol * 320;
           const y = row * 145 + 70;
-          positions.set(gn.id, { x, y });
+          posMap.set(gn.id, { x, y });
         });
 
         currentX += subCols * 320 + 80;
       });
 
     } else if (layoutMode === 'domain') {
-      // Domain Clusters Layout: Group by Architecture Tier
       const pkgMap = new Map<string, GraphNode[]>();
       filtered.forEach((gn) => {
         const pkg = gn.file ? (gn.file.includes('/') ? gn.file.split('/').slice(0, 2).join('/') : 'root') : 'root';
@@ -837,7 +887,7 @@ export default function GraphView() {
         list.forEach((gn, idx) => {
           const subCol = Math.floor(idx / 6);
           const row = idx % 6;
-          positions.set(gn.id, {
+          posMap.set(gn.id, {
             x: clusterX + subCol * 320,
             y: row * 145 + 80,
           });
@@ -846,26 +896,60 @@ export default function GraphView() {
       });
 
     } else {
-      // Compact Grid layout
       const cols = Math.ceil(Math.sqrt(filtered.length)) || 4;
       filtered.forEach((gn, idx) => {
         const col = idx % cols;
         const row = Math.floor(idx / cols);
-        positions.set(gn.id, {
+        posMap.set(gn.id, {
           x: col * 320 + 60,
           y: row * 145 + 70,
         });
       });
     }
 
-    // 4. Transform to React Flow Nodes
-    const rfNodes: Node[] = filtered.map((gn) => {
+    return { filteredNodes: filtered, filteredEdges: finalEdges, positions: posMap };
+  }, [
+    graphData, 
+    search, 
+    selectedType, 
+    selectedLanguage, 
+    selectedPackage, 
+    layoutMode, 
+    densityMode, 
+    connectedOnly, 
+    hideTests, 
+    isolatedSubgraph, 
+    isolatedSubgraph ? focusedNodeId : null
+  ]);
+
+  // Pick top 8 distinct pipeline edges for ambient traveling electrons (Clean & clutter-free)
+  const ambientKeyEdgeIds = useMemo(() => {
+    const keyIds = new Set<string>();
+    const seen = new Set<string>();
+    for (const e of filteredEdges) {
+      if (!seen.has(e.source) || !seen.has(e.target)) {
+        keyIds.add(e.id);
+        seen.add(e.source);
+        seen.add(e.target);
+        if (keyIds.size >= 8) break;
+      }
+    }
+    return keyIds;
+  }, [filteredEdges]);
+
+  // ----------------------------------------------------------------------
+  // STEP 2: Instant Light Transform to React Flow Nodes & Edges (< 0.1ms)
+  // ----------------------------------------------------------------------
+  useEffect(() => {
+    const hasActiveTarget = !!activeTargetId;
+
+    const rfNodes: Node[] = filteredNodes.map((gn) => {
       const pos = positions.get(gn.id) || { x: 50, y: 50 };
       const isFocused = focusedNodeId === gn.id;
+      const isHovered = hoveredNodeId === gn.id;
       const isCaller = callerNodeIds.has(gn.id);
       const isCallee = calleeNodeIds.has(gn.id);
-      const hasFocus = !!focusedNodeId;
-      const isDimmed = hasFocus && !isFocused && !isCaller && !isCallee;
+      const isDimmed = hasActiveTarget && !isFocused && !isHovered && !isCaller && !isCallee;
 
       return {
         id: gn.id,
@@ -874,6 +958,7 @@ export default function GraphView() {
         data: {
           node: gn,
           isFocused,
+          isHovered,
           isCaller,
           isCallee,
           isDimmed,
@@ -886,58 +971,63 @@ export default function GraphView() {
             }
             setSelectedNode(selected);
           },
+          onHover: handleHoverNode,
           onOpenFile: handleOpenFile,
           onIsolate: () => {
-            setIsolatedSubgraph(true);
+            handleToggleIsolate(true);
           },
         },
       };
     });
 
-    // 5. Transform to React Flow Edges with Electron Circuit Traces
-    const rfEdges: Edge[] = finalEdges.map((ge) => {
-      const isConnectedToFocus = focusedNodeId === ge.source || focusedNodeId === ge.target;
-      const isIncomingToFocus = focusedNodeId === ge.target;
-      const isOutgoingFromFocus = focusedNodeId === ge.source;
-      const hasFocus = !!focusedNodeId;
-      const isDimmed = hasFocus && !isConnectedToFocus;
+    const rfEdges: Edge[] = [];
+    filteredEdges.forEach((ge) => {
+      const isConnectedToActive = activeTargetId === ge.source || activeTargetId === ge.target;
+      const isIncomingToActive = activeTargetId === ge.target;
+      const isOutgoingFromActive = activeTargetId === ge.source;
+      const isDimmed = hasActiveTarget && !isConnectedToActive;
 
-      return {
+      // In 'focusOnly' mode, completely hide unselected background edges
+      if (edgeVisibility === 'focusOnly' && !isConnectedToActive) {
+        return;
+      }
+
+      rfEdges.push({
         id: ge.id,
         source: ge.source,
         target: ge.target,
         type: 'electronCircuit',
         data: {
-          isFocused: isConnectedToFocus,
-          isIncoming: isIncomingToFocus,
-          isOutgoing: isOutgoingFromFocus,
+          isFocused: isConnectedToActive,
+          isIncoming: isIncomingToActive,
+          isOutgoing: isOutgoingFromActive,
           isDimmed,
           kind: ge.kind,
           wireRouting,
           enableElectrons,
-          label: hasFocus && isConnectedToFocus ? (isIncomingToFocus ? 'calls ➔' : '➔ invokes') : undefined,
+          edgeVisibility,
+          isAmbientKeyFlow: ambientKeyEdgeIds.has(ge.id),
+          label: hasActiveTarget && isConnectedToActive ? (isIncomingToActive ? 'calls ➔' : '➔ invokes') : undefined,
         },
-      };
+      });
     });
 
     setNodes(rfNodes);
     setEdges(rfEdges);
   }, [
-    graphData, 
-    search, 
-    selectedType, 
-    selectedLanguage,
-    selectedPackage, 
-    layoutMode, 
-    densityMode,
+    filteredNodes,
+    filteredEdges,
+    positions,
+    activeTargetId,
+    focusedNodeId,
+    hoveredNodeId,
+    callerNodeIds,
+    calleeNodeIds,
+    edgeVisibility,
     wireRouting,
     enableElectrons,
-    connectedOnly, 
-    hideTests,
-    focusedNodeId, 
-    isolatedSubgraph,
-    callerNodeIds, 
-    calleeNodeIds,
+    ambientKeyEdgeIds,
+    handleHoverNode,
     setSelectedNode
   ]);
 
@@ -951,12 +1041,22 @@ export default function GraphView() {
 
   // Extract caller and callee nodes for Inspector drawer
   const callerNodes = useMemo(() => {
-    return (graphData.nodes || []).filter((n) => callerNodeIds.has(n.id));
-  }, [graphData.nodes, callerNodeIds]);
+    if (!focusedNodeId) return [];
+    const callers = new Set<string>();
+    (graphData.edges || []).forEach((e) => {
+      if (e.target === focusedNodeId) callers.add(e.source);
+    });
+    return (graphData.nodes || []).filter((n) => callers.has(n.id));
+  }, [graphData.nodes, focusedNodeId]);
 
   const calleeNodes = useMemo(() => {
-    return (graphData.nodes || []).filter((n) => calleeNodeIds.has(n.id));
-  }, [graphData.nodes, calleeNodeIds]);
+    if (!focusedNodeId) return [];
+    const callees = new Set<string>();
+    (graphData.edges || []).forEach((e) => {
+      if (e.source === focusedNodeId) callees.add(e.target);
+    });
+    return (graphData.nodes || []).filter((n) => callees.has(n.id));
+  }, [graphData.nodes, focusedNodeId]);
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-charcoal-950 relative overflow-hidden select-none">
@@ -1211,8 +1311,34 @@ export default function GraphView() {
           </div>
         </div>
 
-        {/* View Layout Controls & Export */}
-        <div className="flex items-center gap-3">
+        {/* View Layout Controls, Edge Density & Viewport Zoom */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Edge Visibility Mode: Smart Flow vs Focus Only vs All Lines */}
+          <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
+            <button
+              onClick={() => setEdgeVisibility('smart')}
+              className={`px-2 py-1 rounded-md transition-all ${
+                edgeVisibility === 'smart'
+                  ? 'bg-charcoal-700 text-white font-semibold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+              title="Smart Flow: Faint circuit lines ambiently, lights up only callers & callees on hover/click (Clean & clear)"
+            >
+              Smart Flow
+            </button>
+            <button
+              onClick={() => setEdgeVisibility('focusOnly')}
+              className={`px-2 py-1 rounded-md transition-all ${
+                edgeVisibility === 'focusOnly'
+                  ? 'bg-charcoal-700 text-white font-semibold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+              title="Focus Only: Hide background lines completely, reveal connections only when hovering/selecting a function"
+            >
+              Focus Only
+            </button>
+          </div>
+
           {/* Wire Routing Style */}
           <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
             <button
@@ -1224,7 +1350,7 @@ export default function GraphView() {
               }`}
               title="Circuit board 90-degree step wires with dashed traces"
             >
-              Circuit Step
+              Step
             </button>
             <button
               onClick={() => setWireRouting('smooth')}
@@ -1235,14 +1361,14 @@ export default function GraphView() {
               }`}
               title="Smooth bezier curves"
             >
-              Smooth Wave
+              Wave
             </button>
           </div>
 
           {/* Electrons Animation Toggle */}
           <button
             onClick={() => setEnableElectrons(!enableElectrons)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-mono transition-all ${
               enableElectrons
                 ? 'bg-sky-500/15 text-sky-300 border-sky-500/30 font-semibold'
                 : 'bg-charcoal-850 text-zinc-500 border-charcoal-750 hover:text-zinc-300'
@@ -1257,25 +1383,25 @@ export default function GraphView() {
           <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
             <button
               onClick={() => setLayoutMode('dag')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
+              className={`px-2 py-1 rounded-md transition-all ${
                 layoutMode === 'dag' ? 'bg-dna-blue text-white shadow-sm font-semibold' : 'text-zinc-400 hover:text-white'
               }`}
               title="Left-to-Right Topological Call Graph (Callers ➔ Callees)"
             >
-              Call Flow DAG
+              DAG
             </button>
             <button
               onClick={() => setLayoutMode('domain')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
+              className={`px-2 py-1 rounded-md transition-all ${
                 layoutMode === 'domain' ? 'bg-dna-blue text-white shadow-sm font-semibold' : 'text-zinc-400 hover:text-white'
               }`}
               title="Group columns by architectural domain tier"
             >
-              Domain Clusters
+              Domain
             </button>
             <button
               onClick={() => setLayoutMode('grid')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
+              className={`px-2 py-1 rounded-md transition-all ${
                 layoutMode === 'grid' ? 'bg-dna-blue text-white shadow-sm font-semibold' : 'text-zinc-400 hover:text-white'
               }`}
               title="Matrix grid by connectivity"
@@ -1284,13 +1410,34 @@ export default function GraphView() {
             </button>
           </div>
 
-          <div className="text-xs font-mono text-zinc-400 px-3 py-1 bg-charcoal-850 border border-charcoal-750 rounded-lg hidden sm:block">
-            <span className="text-white font-semibold">{nodes.length}</span> nodes • <span className="text-white font-semibold">{edges.length}</span> calls
+          {/* Hardware-Accelerated Viewport Zoom Controls */}
+          <div className="flex items-center bg-charcoal-850 border border-charcoal-750 rounded-lg p-0.5 text-xs font-mono">
+            <button
+              onClick={() => zoomIn({ duration: 200 })}
+              className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-charcoal-700 transition-colors"
+              title="Zoom In (+)"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => zoomOut({ duration: 200 })}
+              className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-charcoal-700 transition-colors"
+              title="Zoom Out (-)"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => fitView({ padding: 0.12, duration: 250, minZoom: 0.55, maxZoom: 0.85 })}
+              className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-charcoal-700 transition-colors"
+              title="Fit Whole Graph to Canvas"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           <button
             onClick={handleOpenExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dna-blue/15 hover:bg-dna-blue/25 text-dna-blue border border-dna-blue/30 text-xs font-mono font-medium transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-dna-blue/15 hover:bg-dna-blue/25 text-dna-blue border border-dna-blue/30 text-xs font-mono font-medium transition-all"
             title="Export architecture diagram as Mermaid / C4"
           >
             <Download className="w-3.5 h-3.5" />
@@ -1317,7 +1464,7 @@ export default function GraphView() {
           <div className="flex items-center gap-2">
             {!isolatedSubgraph ? (
               <button
-                onClick={() => setIsolatedSubgraph(true)}
+                onClick={() => handleToggleIsolate(true)}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-dna-blue/20 hover:bg-dna-blue/30 border border-dna-blue/40 text-dna-blue text-[11px] font-semibold transition-all"
                 title="Isolate this exact call workflow"
               >
@@ -1326,7 +1473,7 @@ export default function GraphView() {
               </button>
             ) : (
               <button
-                onClick={() => setIsolatedSubgraph(false)}
+                onClick={() => handleToggleIsolate(false)}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-charcoal-800 hover:bg-charcoal-700 text-zinc-300 text-[11px] font-semibold transition-all"
               >
                 <span>Show Full Graph</span>
@@ -1347,8 +1494,8 @@ export default function GraphView() {
         </div>
       )}
 
-      {/* React Flow Graph Canvas */}
-      <div className="flex-1 w-full h-full relative">
+      {/* React Flow Graph Canvas with Active Interacting Hardware Class */}
+      <div className={`flex-1 w-full h-full relative ${isInteracting ? 'react-flow-interacting' : ''}`}>
         {loading ? (
           <div className="h-full flex flex-col items-center justify-center text-zinc-400 font-mono text-xs gap-3">
             <div className="w-6 h-6 border-2 border-dna-blue border-t-transparent rounded-full animate-spin" />
@@ -1368,42 +1515,47 @@ export default function GraphView() {
             )}
           </div>
         ) : (
-          <ReactFlowProvider>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeClick={onNodeClick}
-              fitView
-              fitViewOptions={{ padding: 0.1, minZoom: 0.6, maxZoom: 0.9 }}
-              minZoom={0.06}
-              maxZoom={2.8}
-              zoomOnScroll={true}
-              zoomOnPinch={true}
-              panOnScroll={false}
-              panOnDrag={true}
-              preventScrolling={true}
-              nodeDragThreshold={1}
-              onlyRenderVisibleElements={true}
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background color="#161820" gap={20} size={1} />
-              <Controls className="!bg-[#14171e] !border-charcoal-700 !fill-zinc-300 !rounded-xl" />
-              <MiniMap 
-                nodeColor={(n) => {
-                  if (n.id === focusedNodeId) return '#3b82f6';
-                  if (callerNodeIds.has(n.id)) return '#34d399';
-                  if (calleeNodeIds.has(n.id)) return '#38bdf8';
-                  return '#52525b';
-                }}
-                maskColor="rgba(10, 11, 14, 0.75)"
-                className="!bg-[#12141c] !border-charcoal-700 !rounded-xl"
-              />
-            </ReactFlow>
-          </ReactFlowProvider>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            onMoveStart={startInteraction}
+            onMoveEnd={stopInteraction}
+            onNodeDragStart={startInteraction}
+            onNodeDragStop={stopInteraction}
+            fitView
+            fitViewOptions={{ padding: 0.12, minZoom: 0.55, maxZoom: 0.85 }}
+            minZoom={0.05}
+            maxZoom={3.0}
+            zoomOnScroll={true}
+            zoomOnPinch={true}
+            panOnScroll={false}
+            panOnDrag={true}
+            preventScrolling={true}
+            nodeDragThreshold={0}
+            elevateNodesOnSelect={false}
+            elevateEdgesOnSelect={false}
+            selectNodesOnDrag={false}
+            onlyRenderVisibleElements={true}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background color="#161820" gap={20} size={1} />
+            <Controls className="!bg-[#14171e] !border-charcoal-700 !fill-zinc-300 !rounded-xl" />
+            <MiniMap 
+              nodeColor={(n) => {
+                if (n.id === activeTargetId) return '#3b82f6';
+                if (callerNodeIds.has(n.id)) return '#34d399';
+                if (calleeNodeIds.has(n.id)) return '#38bdf8';
+                return '#52525b';
+              }}
+              maskColor="rgba(10, 11, 14, 0.75)"
+              className="!bg-[#12141c] !border-charcoal-700 !rounded-xl"
+            />
+          </ReactFlow>
         )}
 
         {/* Dynamic Circuit Track & Electron Legend Toolbar */}
@@ -1415,19 +1567,19 @@ export default function GraphView() {
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 border-b-2 border-dashed border-emerald-400" />
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>Caller Electron (In)</span>
+            <span>Caller (In)</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 border-b-2 border-dashed border-sky-400" />
             <span className="w-2 h-2 rounded-full bg-sky-400" />
-            <span>Callee Electron (Out)</span>
+            <span>Callee (Out)</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 border-b-2 border-dashed border-purple-400" />
             <span>Import</span>
           </span>
           <span className="text-zinc-600">|</span>
-          <span className="text-zinc-400">Click any symbol to isolate path</span>
+          <span className="text-zinc-400">Hover or click any symbol to spotlight call path</span>
         </div>
       </div>
 
@@ -1489,7 +1641,7 @@ export default function GraphView() {
           <div className="p-3 border-b border-charcoal-800 bg-charcoal-950 space-y-2">
             {!isolatedSubgraph ? (
               <button
-                onClick={() => setIsolatedSubgraph(true)}
+                onClick={() => handleToggleIsolate(true)}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-dna-blue/20 hover:bg-dna-blue/30 text-dna-blue border border-dna-blue/40 text-xs font-mono font-semibold transition-all shadow-md"
               >
                 <Sparkles className="w-4 h-4" />
@@ -1497,7 +1649,7 @@ export default function GraphView() {
               </button>
             ) : (
               <button
-                onClick={() => setIsolatedSubgraph(false)}
+                onClick={() => handleToggleIsolate(false)}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-charcoal-800 hover:bg-charcoal-750 text-zinc-300 text-xs font-mono font-semibold transition-all"
               >
                 <span>Restore Full Architecture Graph</span>
@@ -1710,5 +1862,14 @@ export default function GraphView() {
         </div>
       )}
     </div>
+  );
+}
+
+// Root export wrapped in ReactFlowProvider to empower toolbar & controls with useReactFlow
+export default function GraphView() {
+  return (
+    <ReactFlowProvider>
+      <GraphViewContent />
+    </ReactFlowProvider>
   );
 }

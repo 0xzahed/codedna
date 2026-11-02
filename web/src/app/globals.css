@@ -55,3 +55,27 @@ body {
   border: 1px solid #27292e !important;
   border-radius: 6px !important;
 }
+
+/* GPU Acceleration & Performance for Smooth Dragging, Zooming & Panning */
+.react-flow__viewport {
+  transform-origin: 0 0;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.react-flow__node {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.react-flow__edge-path {
+  shape-rendering: geometricPrecision;
+}
+
+/* Temporarily hide SVG animated electron particles during active pan & zoom gestures to maintain buttery 120 FPS */
+.react-flow-interacting .electron-particle {
+  display: none !important;
+}
