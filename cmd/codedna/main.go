@@ -778,4 +778,16 @@ func runDesign(args []string) {
 			fmt.Printf("  • %s\n", b)
 		}
 	}
+
+	if len(report.Recommendations) > 0 {
+		fmt.Println("\n[ ARCHITECTURAL OPTIMIZATION RECOMMENDATIONS ]")
+		for i, rec := range report.Recommendations {
+			fmt.Printf("  %d. [%s] %s (Severity: %s)\n", i+1, rec.Category, rec.Title, rec.Severity)
+			fmt.Printf("     Issue:   %s\n", rec.Description)
+			for _, step := range rec.ActionSteps {
+				fmt.Printf("     ✔ Action: %s\n", step)
+			}
+			fmt.Printf("     Impact:  %s\n\n", rec.Impact)
+		}
+	}
 }
