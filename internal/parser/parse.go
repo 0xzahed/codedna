@@ -20,19 +20,20 @@ func Parse(root, relPath string) (*model.FileParseResult, error) {
 	if lang == "" {
 		return nil, fmt.Errorf("unsupported language for %s", relPath)
 	}
-	sp, err := getSpecs()
-	if err != nil {
-		return nil, err
-	}
-	spec, ok := sp[grammarKey(lang, ext)]
-	if !ok {
-		return nil, fmt.Errorf("no grammar for %s", relPath)
-	}
 	src, err := os.ReadFile(filepath.Join(root, relPath))
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", relPath, err)
 	}
-	return ParseSource(relPath, spec, src)
+
+	sp, err := getSpecs()
+	if err == nil {
+		if spec, ok := sp[grammarKey(lang, ext)]; ok {
+			return ParseSource(relPath, spec, src)
+		}
+	}
+
+	// Heuristic analysis for languages without bundled tree-sitter grammars
+	return ParseHeuristic(relPath, lang, src)
 }
 
 func stripQuotes(s string) string {

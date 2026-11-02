@@ -48,6 +48,30 @@ func LanguageForExt(ext string) string {
 		return "java"
 	case ".php":
 		return "php"
+	case ".c", ".h":
+		return "c"
+	case ".cpp", ".cc", ".cxx", ".hpp", ".hh", ".hxx":
+		return "cpp"
+	case ".cs":
+		return "csharp"
+	case ".rb", ".rake", ".gemspec":
+		return "ruby"
+	case ".rs":
+		return "rust"
+	case ".kt", ".kts":
+		return "kotlin"
+	case ".swift":
+		return "swift"
+	case ".dart":
+		return "dart"
+	case ".vue":
+		return "vue"
+	case ".svelte":
+		return "svelte"
+	case ".sql":
+		return "sql"
+	case ".graphql", ".gql":
+		return "graphql"
 	default:
 		return ""
 	}

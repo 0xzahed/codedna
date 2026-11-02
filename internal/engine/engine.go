@@ -55,11 +55,12 @@ func Run(repoRoot string, st *store.Store, progress scanner.ScanProgress) (*Pipe
 		return nil, fmt.Errorf("begin scan: %w", err)
 	}
 
-	// 4. Parse code files using Tree-sitter in parallel
+	// 4. Parse code files using Tree-sitter & heuristic engines in parallel
 	canParse := scanner.ParsedLanguages()
+	heuristicParse := scanner.HeuristicLanguages()
 	var parseableFiles []model.FileNode
 	for _, f := range scanRes.Files {
-		if canParse[f.Language] {
+		if canParse[f.Language] || heuristicParse[f.Language] {
 			parseableFiles = append(parseableFiles, f)
 		}
 	}
