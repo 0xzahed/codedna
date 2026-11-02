@@ -139,6 +139,12 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - Built **Call Hierarchy Inspector Drawer** detailing callers, callees, complexity, and line locations with one-click focal hopping.
   - Integrated full **Embedded Code Editor Viewer modal** with syntax highlighting and direct line jump from any graph node.
   - Added **Package / Module isolation dropdown filter** and **Connected Only toggle** to eliminate visual clutter.
+- [x] **Task 5.7 — Neon Lighting Wires & Sub-Column Call Graph Layout Optimization:**
+  - Engineered **NeonLightingEdge** custom React Flow edge component rendering luminous ambient glow, core electric wire, and live animated electrical light pulse particles traveling from Caller to Callee at 60fps.
+  - Implemented **Sub-Column DAG Wrapping** (max 7 rows per sub-column) preventing 30,000px vertical stretching and keeping caller-callee pairs tightly grouped on screen.
+  - Added **Prod Only / Hide Tests toggle** and **Language filter (Go, TypeScript)** to separate backend execution flow from test suites and frontend components.
+  - Added **Isolate Call Subgraph mode**: one-click isolated 3-tier view (Callers ➔ Target ➔ Callees) for distraction-free function analysis.
+  - Added custom SVG glowing neon arrow markers (Emerald, Cyan, Purple, White).
 - [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
   - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
 
