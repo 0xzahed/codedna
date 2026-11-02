@@ -36,7 +36,10 @@ import {
   FileCode, 
   X,
   Compass,
-  ArrowRight
+  ArrowRight,
+  Search,
+  Filter,
+  Sparkles
 } from 'lucide-react';
 
 interface ArchitectureDiagramGraphProps {
@@ -93,26 +96,59 @@ const TIER_PALETTES: Record<string, { border: string; bg: string; text: string; 
   },
 };
 
+type ProtocolFilterType = 'ALL' | 'HTTPS' | 'IN_MEMORY' | 'STORAGE' | 'ASYNC';
+
+function matchesProtocolFilter(protocol: string, filter: ProtocolFilterType): boolean {
+  if (filter === 'ALL') return true;
+  const p = protocol.toLowerCase();
+  if (filter === 'HTTPS') return p.includes('http') || p.includes('rest');
+  if (filter === 'IN_MEMORY') return p.includes('memory') || p.includes('internal');
+  if (filter === 'STORAGE') return p.includes('sql') || p.includes('storage');
+  if (filter === 'ASYNC') return p.includes('async') || p.includes('channel') || p.includes('event');
+  return true;
+}
+
 // Custom Node Component for Architectural Tiers
 function TierNodeComponent({ data }: { data: any }) {
   const tier: SystemTier = data.tier;
   const isSelected = data.isSelected;
+  const isSearchMatch = data.isSearchMatch;
+  const isDimmed = data.isDimmed;
+  const matchedFiles: string[] = data.matchedFiles || [];
+  const searchTerm: string = data.searchTerm || '';
   const onSelect = data.onSelect;
   const onOpenFile = data.onOpenFile;
   const Icon = TIER_ICONS[tier.id] || Layers;
   const palette = TIER_PALETTES[tier.id] || { border: '#71717a', bg: 'rgba(113, 113, 122, 0.08)', text: '#71717a', edge: '#71717a' };
 
+  // Calculate files to display: if search matched, prioritize matched files
+  const displayFiles = useMemo(() => {
+    if (!tier.files) return [];
+    if (!searchTerm) return tier.files;
+    const matched = tier.files.filter(f => f.toLowerCase().includes(searchTerm.toLowerCase()));
+    const unmatched = tier.files.filter(f => !f.toLowerCase().includes(searchTerm.toLowerCase()));
+    return [...matched, ...unmatched];
+  }, [tier.files, searchTerm]);
+
   return (
     <div
       onClick={() => onSelect && onSelect(tier)}
       className={`w-72 rounded-xl p-4 transition-all duration-200 cursor-pointer shadow-xl ${
-        isSelected
+        isDimmed ? 'opacity-30 hover:opacity-100' : 'opacity-100'
+      } ${
+        isSearchMatch
+          ? 'ring-2 ring-emerald-400 shadow-emerald-400/20 bg-[#121c17]'
+          : isSelected
           ? 'ring-2 ring-dna-blue shadow-dna-blue/20 bg-[#161a22]'
           : 'hover:border-zinc-500 bg-[#101217]'
       }`}
       style={{
-        border: `1.5px solid ${isSelected ? '#3b82f6' : palette.border}88`,
-        boxShadow: isSelected ? `0 0 24px ${palette.border}33` : '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+        border: `1.5px solid ${isSearchMatch ? '#34d399' : isSelected ? '#3b82f6' : palette.border}88`,
+        boxShadow: isSearchMatch
+          ? '0 0 25px rgba(52, 211, 153, 0.25)'
+          : isSelected
+          ? `0 0 24px ${palette.border}33`
+          : '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
       }}
     >
       {/* React Flow Connection Handles */}
@@ -139,7 +175,12 @@ function TierNodeComponent({ data }: { data: any }) {
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-charcoal-800 border border-charcoal-700 text-zinc-400">
                 Tier {tier.order}
               </span>
-              {tier.fileCount === 0 && (
+              {isSearchMatch && (
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  {matchedFiles.length} match{matchedFiles.length > 1 ? 'es' : ''}
+                </span>
+              )}
+              {tier.fileCount === 0 && !isSearchMatch && (
                 <span className="text-[9px] font-mono px-1 rounded bg-zinc-800 text-zinc-500">Unused</span>
               )}
             </div>
@@ -161,26 +202,33 @@ function TierNodeComponent({ data }: { data: any }) {
       </div>
 
       {/* Sample Key Components Pills */}
-      {tier.files && tier.files.length > 0 && (
+      {displayFiles.length > 0 && (
         <div className="mt-2.5 space-y-1">
           <div className="text-[9px] font-mono uppercase tracking-wider text-zinc-500">Components:</div>
           <div className="flex flex-wrap gap-1 max-h-16 overflow-hidden">
-            {tier.files.slice(0, 3).map((f) => (
-              <span 
-                key={f}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenFile && onOpenFile(f);
-                }}
-                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-charcoal-800 hover:bg-charcoal-750 text-zinc-300 hover:text-white border border-charcoal-700 truncate max-w-[240px] cursor-pointer"
-                title={`Click to inspect ${f} in editor`}
-              >
-                {f.split('/').pop()}
-              </span>
-            ))}
-            {tier.files.length > 3 && (
+            {displayFiles.slice(0, 3).map((f) => {
+              const isMatch = searchTerm && f.toLowerCase().includes(searchTerm.toLowerCase());
+              return (
+                <span 
+                  key={f}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenFile && onOpenFile(f);
+                  }}
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded truncate max-w-[240px] cursor-pointer transition-colors ${
+                    isMatch
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                      : 'bg-charcoal-800 hover:bg-charcoal-750 text-zinc-300 hover:text-white border border-charcoal-700'
+                  }`}
+                  title={`Click to inspect ${f} in editor`}
+                >
+                  {f.split('/').pop()}
+                </span>
+              );
+            })}
+            {displayFiles.length > 3 && (
               <span className="text-[9px] font-mono px-1 py-0.5 text-zinc-500">
-                +{tier.files.length - 3} more
+                +{displayFiles.length - 3} more
               </span>
             )}
           </div>
@@ -201,8 +249,32 @@ function ArchitectureDiagramGraphInner({
 }: ArchitectureDiagramGraphProps) {
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<'pipeline' | 'horizontal'>('pipeline');
+  const [protocolFilter, setProtocolFilter] = useState<ProtocolFilterType>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
   const [copiedMermaid, setCopiedMermaid] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Compute tier matching status based on search query
+  const tierSearchStats = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const map: Record<string, { isMatch: boolean; matchedFiles: string[] }> = {};
+    if (!report?.tiers) return map;
+
+    report.tiers.forEach((t) => {
+      if (!q) {
+        map[t.id] = { isMatch: false, matchedFiles: [] };
+        return;
+      }
+      const matchedFiles = (t.files || []).filter((f) => f.toLowerCase().includes(q));
+      const matchedSymbols = (t.keySymbols || []).filter((s) => s.toLowerCase().includes(q));
+      const isNameMatch = t.name.toLowerCase().includes(q);
+      const isMatch = matchedFiles.length > 0 || matchedSymbols.length > 0 || isNameMatch;
+      map[t.id] = { isMatch, matchedFiles };
+    });
+    return map;
+  }, [report, searchTerm]);
+
+  const hasSearchFilter = searchTerm.trim().length > 0;
 
   // Compute Layout Positions
   const initialNodes: Node[] = useMemo(() => {
@@ -232,6 +304,9 @@ function ArchitectureDiagramGraphInner({
 
     return report.tiers.map((t) => {
       const pos = coords[t.id] || { x: 300, y: 300 };
+      const searchInfo = tierSearchStats[t.id] || { isMatch: false, matchedFiles: [] };
+      const isDimmed = hasSearchFilter && !searchInfo.isMatch;
+
       return {
         id: t.id,
         type: 'tierNode',
@@ -239,6 +314,10 @@ function ArchitectureDiagramGraphInner({
         data: {
           tier: t,
           isSelected: selectedTierId === t.id,
+          isSearchMatch: searchInfo.isMatch,
+          isDimmed,
+          matchedFiles: searchInfo.matchedFiles,
+          searchTerm: searchTerm.trim(),
           onSelect: (selected: SystemTier) => {
             setSelectedTierId(selected.id);
             if (onSelectTier) onSelectTier(selected);
@@ -247,34 +326,50 @@ function ArchitectureDiagramGraphInner({
         },
       };
     });
-  }, [report, selectedTierId, layoutMode, onSelectTier, onOpenFile]);
+  }, [report, selectedTierId, layoutMode, tierSearchStats, hasSearchFilter, searchTerm, onSelectTier, onOpenFile]);
 
-  // Compute Cross-Tier Directed Edges
+  // Compute protocol counts for filter pills
+  const protocolCounts = useMemo(() => {
+    const counts = { ALL: 0, HTTPS: 0, IN_MEMORY: 0, STORAGE: 0, ASYNC: 0 };
+    if (!report?.dataFlow) return counts;
+    counts.ALL = report.dataFlow.length;
+    report.dataFlow.forEach((h) => {
+      if (matchesProtocolFilter(h.protocol, 'HTTPS')) counts.HTTPS++;
+      if (matchesProtocolFilter(h.protocol, 'IN_MEMORY')) counts.IN_MEMORY++;
+      if (matchesProtocolFilter(h.protocol, 'STORAGE')) counts.STORAGE++;
+      if (matchesProtocolFilter(h.protocol, 'ASYNC')) counts.ASYNC++;
+    });
+    return counts;
+  }, [report]);
+
+  // Compute Cross-Tier Directed Edges with protocol filtering
   const initialEdges: Edge[] = useMemo(() => {
     if (!report?.dataFlow) return [];
 
     return report.dataFlow.map((hop, idx) => {
+      const isMatch = matchesProtocolFilter(hop.protocol, protocolFilter);
       const fromPalette = TIER_PALETTES[hop.fromTier] || { edge: '#60a5fa' };
-      const edgeColor = fromPalette.edge;
+      const edgeColor = isMatch ? fromPalette.edge : '#2d3340';
 
       return {
         id: `flow-${hop.fromTier}-${hop.toTier}-${idx}`,
         source: hop.fromTier,
         target: hop.toTier,
         type: 'smoothstep',
-        animated: true,
+        animated: isMatch,
         style: {
           stroke: edgeColor,
-          strokeWidth: Math.min(4, Math.max(1.8, Math.log2(hop.callCount + 1))),
-          strokeDasharray: '5,5',
+          strokeWidth: isMatch ? Math.min(4, Math.max(1.8, Math.log2(hop.callCount + 1))) : 1,
+          strokeDasharray: isMatch ? '5,5' : '2,2',
+          opacity: isMatch ? 1 : 0.2,
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: edgeColor,
-          width: 14,
-          height: 14,
+          width: isMatch ? 14 : 8,
+          height: isMatch ? 14 : 8,
         },
-        label: `${hop.protocol} (${hop.callCount})`,
+        label: isMatch ? `${hop.protocol} (${hop.callCount})` : '',
         labelStyle: {
           fill: '#e4e4e7',
           fontWeight: 600,
@@ -291,7 +386,7 @@ function ArchitectureDiagramGraphInner({
         },
       };
     });
-  }, [report]);
+  }, [report, protocolFilter]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -332,93 +427,160 @@ function ArchitectureDiagramGraphInner({
   };
 
   return (
-    <div className="relative w-full h-[680px] rounded-2xl border border-charcoal-750 bg-[#090b0e] overflow-hidden shadow-2xl">
-      {/* Canvas Header & Toolbar */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-        {/* Left: Title & Mode */}
-        <div className="pointer-events-auto flex items-center gap-2 bg-[#14171e]/90 backdrop-blur-md px-3.5 py-2 rounded-xl border border-charcoal-700 shadow-lg text-xs font-mono">
-          <Compass className="w-4 h-4 text-dna-blue" />
-          <span className="font-bold text-white">Architecture Flow Graph</span>
-          <span className="text-zinc-500">•</span>
-          <span className="text-zinc-400">{report.tiers.length} Tiers, {report.dataFlow.length} Active Protocol Hops</span>
+    <div className="relative w-full h-[720px] rounded-2xl border border-charcoal-750 bg-[#090b0e] overflow-hidden shadow-2xl flex flex-col">
+      {/* Canvas Top Bar */}
+      <div className="z-10 bg-[#12151c]/95 backdrop-blur-md px-4 py-3 border-b border-charcoal-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        {/* Left: Title & Search Bar */}
+        <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+          <div className="flex items-center gap-2 font-mono text-xs text-white shrink-0">
+            <Compass className="w-4 h-4 text-dna-blue" />
+            <span className="font-bold">Architecture Graph</span>
+          </div>
+
+          {/* Component Search Input */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Filter tiers by file or symbol..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8 pr-7 py-1.5 bg-charcoal-900 border border-charcoal-700 focus:border-dna-blue rounded-lg text-xs font-mono text-zinc-200 placeholder-zinc-500 focus:outline-none transition-colors"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Right: Layout Switcher & Mermaid Export */}
-        <div className="pointer-events-auto flex items-center gap-2 bg-[#14171e]/90 backdrop-blur-md p-1.5 rounded-xl border border-charcoal-700 shadow-lg text-xs font-mono">
-          <div className="flex items-center gap-1 bg-[#1c2029] p-0.5 rounded-lg border border-charcoal-750 text-[11px]">
+        {/* Right: Protocol Filters & Export */}
+        <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
+          {/* Protocol Filter Pills */}
+          <div className="flex items-center gap-1 bg-charcoal-900 p-0.5 rounded-lg border border-charcoal-750 text-[11px]">
             <button
-              onClick={() => setLayoutMode('pipeline')}
+              onClick={() => setProtocolFilter('ALL')}
               className={`px-2.5 py-1 rounded transition-all ${
-                layoutMode === 'pipeline' ? 'bg-dna-blue text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+                protocolFilter === 'ALL' ? 'bg-dna-blue text-white shadow-sm font-semibold' : 'text-zinc-400 hover:text-white'
               }`}
             >
-              Pipeline (T➔B)
+              All ({protocolCounts.ALL})
+            </button>
+            <button
+              onClick={() => setProtocolFilter('HTTPS')}
+              className={`px-2 py-1 rounded transition-all ${
+                protocolFilter === 'HTTPS' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-semibold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              HTTPS ({protocolCounts.HTTPS})
+            </button>
+            <button
+              onClick={() => setProtocolFilter('IN_MEMORY')}
+              className={`px-2 py-1 rounded transition-all ${
+                protocolFilter === 'IN_MEMORY' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              In-Memory ({protocolCounts.IN_MEMORY})
+            </button>
+            <button
+              onClick={() => setProtocolFilter('STORAGE')}
+              className={`px-2 py-1 rounded transition-all ${
+                protocolFilter === 'STORAGE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Storage ({protocolCounts.STORAGE})
+            </button>
+            <button
+              onClick={() => setProtocolFilter('ASYNC')}
+              className={`px-2 py-1 rounded transition-all ${
+                protocolFilter === 'ASYNC' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-semibold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Async ({protocolCounts.ASYNC})
+            </button>
+          </div>
+
+          {/* Layout Switcher */}
+          <div className="flex items-center gap-1 bg-charcoal-900 p-0.5 rounded-lg border border-charcoal-750 text-[11px]">
+            <button
+              onClick={() => setLayoutMode('pipeline')}
+              className={`px-2 py-1 rounded transition-all ${
+                layoutMode === 'pipeline' ? 'bg-charcoal-750 text-white font-semibold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Pipeline
             </button>
             <button
               onClick={() => setLayoutMode('horizontal')}
-              className={`px-2.5 py-1 rounded transition-all ${
-                layoutMode === 'horizontal' ? 'bg-dna-blue text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+              className={`px-2 py-1 rounded transition-all ${
+                layoutMode === 'horizontal' ? 'bg-charcoal-750 text-white font-semibold' : 'text-zinc-400 hover:text-white'
               }`}
             >
-              Layered (L➔R)
+              Layered
             </button>
           </div>
 
           <button
             onClick={() => setShowExportModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-zinc-200 hover:text-white transition-all text-xs"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-charcoal-800 hover:bg-charcoal-750 border border-charcoal-700 text-zinc-200 hover:text-white transition-all text-xs"
             title="Export architecture diagram as Mermaid.js"
           >
             <Share2 className="w-3.5 h-3.5 text-dna-purple" />
-            <span>Export Diagram</span>
+            <span>Mermaid</span>
           </button>
         </div>
       </div>
 
-      {/* Legend Indicator */}
-      <div className="absolute bottom-4 left-4 z-10 pointer-events-auto hidden md:flex items-center gap-3 bg-[#14171e]/90 backdrop-blur-md px-3.5 py-2 rounded-xl border border-charcoal-700 text-[11px] font-mono text-zinc-300">
-        <span className="text-zinc-500">Protocols:</span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-sky-400" />
-          <span>HTTPS/REST</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span>In-Memory</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-amber-400" />
-          <span>SQL/Storage</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-purple-400" />
-          <span>Async Event</span>
-        </span>
-      </div>
-
       {/* React Flow Diagram Canvas */}
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.2}
-        maxZoom={1.8}
-        attributionPosition="bottom-right"
-      >
-        <Background color="#1f242e" gap={20} size={1} />
-        <Controls className="!bg-[#14171e] !border-charcoal-700 !fill-zinc-300 !rounded-xl" />
-        <MiniMap
-          nodeColor={(n) => {
-            const palette = TIER_PALETTES[n.id];
-            return palette ? palette.border : '#52525b';
-          }}
-          className="!bg-[#14171e] !border-charcoal-700 !rounded-xl"
-        />
-      </ReactFlow>
+      <div className="flex-1 relative">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          fitView
+          fitViewOptions={{ padding: 0.15 }}
+          minZoom={0.2}
+          maxZoom={1.8}
+          attributionPosition="bottom-right"
+        >
+          <Background color="#1a1e27" gap={20} size={1} />
+          <Controls className="!bg-[#14171e] !border-charcoal-700 !fill-zinc-300 !rounded-xl" />
+          <MiniMap
+            nodeColor={(n) => {
+              const palette = TIER_PALETTES[n.id];
+              return palette ? palette.border : '#52525b';
+            }}
+            className="!bg-[#14171e] !border-charcoal-700 !rounded-xl"
+          />
+        </ReactFlow>
+
+        {/* Dynamic Legend Indicator */}
+        <div className="absolute bottom-4 left-4 z-10 pointer-events-auto hidden md:flex items-center gap-3 bg-[#14171e]/90 backdrop-blur-md px-3.5 py-2 rounded-xl border border-charcoal-700 text-[11px] font-mono text-zinc-300 shadow-lg">
+          <span className="text-zinc-500">Legend:</span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-sky-400" />
+            <span>HTTPS/REST</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>In-Memory</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            <span>SQL/Storage</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-purple-400" />
+            <span>Async Event</span>
+          </span>
+        </div>
+      </div>
 
       {/* Mermaid Export Modal */}
       {showExportModal && (
