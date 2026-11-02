@@ -32,7 +32,7 @@ export default function DependencyView() {
   const frameworks = data.frameworks || [];
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 space-y-8 w-full max-w-[1920px] mx-auto">
       {/* Header */}
       <div className="border-b border-charcoal-750 pb-6">
         <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
