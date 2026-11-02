@@ -42,7 +42,7 @@ export default function ImpactView() {
     report?.riskLevel === 'medium' ? 'text-dna-amber' : 'text-emerald-400';
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 space-y-8 w-full max-w-[1920px] mx-auto">
       {/* Header & Diff Selector */}
       <div className="flex items-center justify-between border-b border-charcoal-750 pb-6">
         <div>
