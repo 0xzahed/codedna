@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.4.0] - 2026-11-02
+## [1.0.0] - 2026-11-02 — First Official Public Release
+
+### Highlights
+- **Universal Zero-Dependency Single-Command Installer** for Linux, macOS, and Windows.
+- **Polyglot Code Intelligence Engine** with Tree-sitter and heuristic AST parsers supporting Go, TypeScript, JavaScript, Python, Java, PHP, Rust, C, C++, C#, Ruby, Kotlin, Swift, Dart, SQL, and GraphQL.
+- **System Design & Multi-Tier Topology Engine** with GoF & architectural pattern recognition gallery.
+- **Zero-Config Web Dashboard** with React Flow canvas, C4/Mermaid exporter, and real-time live SSE updates.
+- **Developer Experience & Safety CLI** featuring `codedna doctor`, `codedna check`, `codedna update`, `codedna uninstall`, `codedna docker`, and home-directory guardrails.
 
 ### Added
 - **System Design & Multi-Tier Architecture Topology Engine**: Automated structural tier classification (`internal/sysdesign`) categorizing files and symbols across 6 architectural tiers (Client & Gateway, API Presentation, Domain Services, Persistence Storage, Async Messaging, External Integrations).

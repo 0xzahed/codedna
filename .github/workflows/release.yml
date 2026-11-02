@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release Tag (e.g. v2.4.0)'
+        description: 'Release Tag (e.g. v1.0.0)'
         required: true
-        default: 'v2.4.0'
+        default: 'v1.0.0'
 
 permissions:
   contents: write
@@ -89,9 +89,16 @@ jobs:
             TAG="${{ github.event.inputs.tag }}"
           fi
           if [ -z "$TAG" ]; then
-            TAG="v2.4.0"
+            TAG="v1.0.0"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Setup MinGW GCC for Windows CGO
+        if: matrix.target.os == 'windows'
+        shell: bash
+        run: |
+          echo "C:/msys64/mingw64/bin" >> $GITHUB_PATH
+          echo "C:/msys64/usr/bin" >> $GITHUB_PATH
 
       - name: Compile CodeDNA Binary
         shell: bash
@@ -163,7 +170,7 @@ jobs:
             TAG="${{ github.event.inputs.tag }}"
           fi
           if [ -z "$TAG" ]; then
-            TAG="v2.4.0"
+            TAG="v1.0.0"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
