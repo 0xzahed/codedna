@@ -117,8 +117,11 @@ func TestGitDetection(t *testing.T) {
 	if !meta.IsGitRepo {
 		t.Error("Expected current directory to be detected as git repo")
 	}
-	if meta.Branch != "main" {
-		t.Errorf("Expected branch main, got %s", meta.Branch)
+	if meta.Commit == "" {
+		t.Error("Expected git commit hash to be non-empty")
+	}
+	if meta.Branch == "" {
+		t.Error("Expected non-empty git branch or tag reference")
 	}
 }
 

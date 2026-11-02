@@ -41,10 +41,12 @@ func detectGit(root string) (model.GitMeta, error) {
 		return strings.TrimSpace(string(out)), err
 	}
 
-	// Determine branch
+	// Determine branch or tag
 	if b, err := git("branch", "--show-current"); err == nil && b != "" {
 		meta.Branch = b
 	} else if b, err := git("symbolic-ref", "--short", "HEAD"); err == nil && b != "" {
+		meta.Branch = b
+	} else if b, err := git("describe", "--tags", "--exact-match"); err == nil && b != "" {
 		meta.Branch = b
 	} else if b, err := git("rev-parse", "--abbrev-ref", "HEAD"); err == nil && b != "HEAD" {
 		meta.Branch = b
