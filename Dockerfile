@@ -1,5 +1,5 @@
-# Build stage for Web Dashboard
-FROM node:20-alpine AS web-builder
+# Build stage for Web Dashboard (Runs natively on build host for 10x faster build and avoids QEMU SIGILL)
+FROM --platform=$BUILDPLATFORM node:20-alpine AS web-builder
 WORKDIR /app/web
 COPY web/package*.json ./
 RUN npm ci
