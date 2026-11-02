@@ -145,6 +145,10 @@ This document tracks all features, bug fixes, performance optimizations, and arc
   - Added **Prod Only / Hide Tests toggle** and **Language filter (Go, TypeScript)** to separate backend execution flow from test suites and frontend components.
   - Added **Isolate Call Subgraph mode**: one-click isolated 3-tier view (Callers ➔ Target ➔ Callees) for distraction-free function analysis.
   - Added custom SVG glowing neon arrow markers (Emerald, Cyan, Purple, White).
+- [x] **Task 5.8 — Widescreen Canvas Optimization & Collapsible Sidebar Mode:**
+  - Expanded main view content containers across all pages (`SystemDesignView`, `ArchitectureView`, `OverviewView`, `DependencyView`, `ImpactView`, `RuntimeView`, `AIView`) from 1280px (`max-w-7xl`) to 1920px (`max-w-[1920px] w-full`).
+  - Added collapsible sidebar toggle with icon-only mode (`w-16` vs `w-64`), yielding +200px of additional horizontal space for diagrams.
+  - Increased `ArchitectureDiagramGraph` canvas height to 850px and integrated one-click Fullscreen expansion mode.
 - [ ] **Task 5.1 — Rust & C++ AST Tree-Sitter Grammars:**
   - Expand parser coverage to Rust (`.rs`) and C/C++ (`.c`, `.cpp`, `.h`) with trait and macro resolution.
 
