@@ -76,7 +76,7 @@ export default function OverviewView() {
   const healthScore = Math.max(0, 100 - (cycles.length * 15) - (hotspots.length * 2) - (((arch?.violations?.length) || 0) * 4));
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 space-y-8 w-full max-w-[1920px] mx-auto">
       {/* Welcome Banner */}
       <div className="flex items-center justify-between border-b border-charcoal-750 pb-6">
         <div>
