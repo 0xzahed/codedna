@@ -1378,7 +1378,7 @@ export default function GraphView() {
               onEdgesChange={onEdgesChange}
               onNodeClick={onNodeClick}
               fitView
-              fitViewOptions={{ padding: 0.15 }}
+              fitViewOptions={{ padding: 0.1, minZoom: 0.6, maxZoom: 0.9 }}
               minZoom={0.06}
               maxZoom={2.8}
               zoomOnScroll={true}
