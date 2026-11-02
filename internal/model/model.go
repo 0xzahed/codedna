@@ -525,14 +525,25 @@ type DetectedPattern struct {
 	Tradeoffs   string          `json:"tradeoffs"`
 }
 
+type ArchRecommendation struct {
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Category    string   `json:"category"` // "Decoupling", "Caching", "Resilience", "Scalability", "Modularity"
+	Severity    Severity `json:"severity"` // "high", "medium", "low"
+	Description string   `json:"description"`
+	ActionSteps []string `json:"actionSteps"`
+	Impact      string   `json:"impact"`
+}
+
 type SystemDesignReport struct {
-	ArchitectureStyle  string            `json:"architectureStyle"`
-	Summary            string            `json:"summary"`
-	Tiers              []SystemTier      `json:"tiers"`
-	DataFlow           []DataFlowHop     `json:"dataFlow"`
-	DetectedPatterns   []DetectedPattern `json:"detectedPatterns"`
-	KeyEntrypoints     []string          `json:"keyEntrypoints"`
-	BottleneckHotspots []string          `json:"bottleneckHotspots"`
-	ReliabilityScore   float64           `json:"reliabilityScore"` // 0 - 100
+	ArchitectureStyle  string               `json:"architectureStyle"`
+	Summary            string               `json:"summary"`
+	Tiers              []SystemTier         `json:"tiers"`
+	DataFlow           []DataFlowHop        `json:"dataFlow"`
+	DetectedPatterns   []DetectedPattern    `json:"detectedPatterns"`
+	KeyEntrypoints     []string             `json:"keyEntrypoints"`
+	BottleneckHotspots []string             `json:"bottleneckHotspots"`
+	Recommendations    []ArchRecommendation `json:"recommendations"`
+	ReliabilityScore   float64              `json:"reliabilityScore"` // 0 - 100
 }
 
