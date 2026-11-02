@@ -100,7 +100,7 @@ export default function AIView() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 space-y-6 w-full max-w-[1920px] mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-charcoal-750 pb-6">
         <div>
