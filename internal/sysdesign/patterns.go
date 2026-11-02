@@ -21,6 +21,7 @@ func AnalyzeSystemDesign(files []model.FileNode, syms []model.Symbol, rels []mod
 	archStyle := inferArchitectureStyle(tiers, patterns, dataFlow)
 	summary := generateDesignSummary(archStyle, tiers, patterns, dataFlow)
 	reliability := calculateReliabilityScore(tiers, patterns, bottlenecks, dataFlow)
+	recommendations := generateRecommendations(tiers, dataFlow, bottlenecks)
 
 	return model.SystemDesignReport{
 		ArchitectureStyle:  archStyle,
@@ -30,6 +31,7 @@ func AnalyzeSystemDesign(files []model.FileNode, syms []model.Symbol, rels []mod
 		DetectedPatterns:   patterns,
 		KeyEntrypoints:     entrypoints,
 		BottleneckHotspots: bottlenecks,
+		Recommendations:    recommendations,
 		ReliabilityScore:   reliability,
 	}
 }
@@ -57,6 +59,18 @@ func DetectPatterns(files []model.FileNode, syms []model.Symbol, rels []model.Re
 		patterns = append(patterns, p)
 	}
 	if p, ok := detectCQRSPattern(files, syms); ok {
+		patterns = append(patterns, p)
+	}
+	if p, ok := detectResiliencePattern(files, syms); ok {
+		patterns = append(patterns, p)
+	}
+	if p, ok := detectAdapterPattern(files, syms); ok {
+		patterns = append(patterns, p)
+	}
+	if p, ok := detectStrategyPattern(files, syms); ok {
+		patterns = append(patterns, p)
+	}
+	if p, ok := detectObserverPattern(files, syms); ok {
 		patterns = append(patterns, p)
 	}
 
@@ -368,6 +382,253 @@ func detectCQRSPattern(files []model.FileNode, syms []model.Symbol) (model.Detec
 		Files:     nil,
 		Tradeoffs: "Allows fine-grained optimization for high-throughput reads vs writes; introduces duplicate data structures.",
 	}, true
+}
+
+func detectResiliencePattern(files []model.FileNode, syms []model.Symbol) (model.DetectedPattern, bool) {
+	var resilienceSyms []string
+	var matchedFiles []string
+	seenFiles := make(map[string]bool)
+
+	for _, s := range syms {
+		name := strings.ToLower(s.Name)
+		if strings.Contains(name, "retry") || strings.Contains(name, "backoff") ||
+			strings.Contains(name, "timeout") || strings.Contains(name, "circuit") ||
+			strings.Contains(name, "ratelimit") || strings.Contains(name, "throttle") {
+			resilienceSyms = append(resilienceSyms, s.QualifiedName)
+			if !seenFiles[s.File] && s.File != "" {
+				seenFiles[s.File] = true
+				matchedFiles = append(matchedFiles, s.File)
+			}
+		}
+	}
+
+	if len(resilienceSyms) == 0 {
+		return model.DetectedPattern{}, false
+	}
+
+	conf := 0.75
+	if len(resilienceSyms) >= 3 {
+		conf = 0.90
+	}
+
+	return model.DetectedPattern{
+		ID:          "pattern-resilience",
+		Name:        "Resilience & Fault Tolerance (Circuit Breaker / Retry)",
+		Category:    model.PatternStructural,
+		Confidence:  conf,
+		Description: "Safeguards system boundaries with retry backoffs, circuit breakers, rate limiters, or context timeout deadlines to prevent cascading service degradation.",
+		Evidence: []string{
+			fmt.Sprintf("Discovered %d fault tolerance and resilience symbols", len(resilienceSyms)),
+			fmt.Sprintf("Key components: %s", strings.Join(resilienceSyms[:min(len(resilienceSyms), 4)], ", ")),
+		},
+		Files:     matchedFiles[:min(len(matchedFiles), 10)],
+		Tradeoffs: "Prevents resource exhaustion under degraded dependencies; increases response latency when retrying failing downstream backends.",
+	}, true
+}
+
+func detectAdapterPattern(files []model.FileNode, syms []model.Symbol) (model.DetectedPattern, bool) {
+	var adapterFiles []string
+	var adapterSyms []string
+
+	for _, f := range files {
+		p := strings.ToLower(f.Path)
+		if strings.Contains(p, "adapter") || strings.Contains(p, "facade") ||
+			strings.Contains(p, "wrapper") || strings.Contains(p, "proxy") {
+			adapterFiles = append(adapterFiles, f.Path)
+		}
+	}
+
+	for _, s := range syms {
+		name := strings.ToLower(s.Name)
+		if strings.HasSuffix(name, "adapter") || strings.HasSuffix(name, "facade") ||
+			strings.HasSuffix(name, "wrapper") || strings.HasSuffix(name, "client") {
+			adapterSyms = append(adapterSyms, s.QualifiedName)
+		}
+	}
+
+	if len(adapterFiles) == 0 && len(adapterSyms) < 2 {
+		return model.DetectedPattern{}, false
+	}
+
+	conf := 0.70
+	if len(adapterFiles) >= 2 || len(adapterSyms) >= 4 {
+		conf = 0.88
+	}
+
+	return model.DetectedPattern{
+		ID:          "pattern-adapter",
+		Name:        "Adapter / Facade Pattern",
+		Category:    model.PatternStructural,
+		Confidence:  conf,
+		Description: "Converts interface contracts between incompatible third-party services or subsystems into unified internal domain APIs.",
+		Evidence: []string{
+			fmt.Sprintf("Found %d adapter/wrapper files and %d client adapter symbols", len(adapterFiles), len(adapterSyms)),
+		},
+		Files:     adapterFiles[:min(len(adapterFiles), 10)],
+		Tradeoffs: "Shields domain core from vendor changes; introduces a lightweight translation layer.",
+	}, true
+}
+
+func detectStrategyPattern(files []model.FileNode, syms []model.Symbol) (model.DetectedPattern, bool) {
+	var strategySyms []string
+
+	for _, s := range syms {
+		name := strings.ToLower(s.Name)
+		if strings.HasSuffix(name, "strategy") || strings.HasSuffix(name, "policy") ||
+			strings.HasSuffix(name, "matcher") || strings.HasSuffix(name, "evaluator") ||
+			strings.HasSuffix(name, "rule") {
+			strategySyms = append(strategySyms, s.QualifiedName)
+		}
+	}
+
+	if len(strategySyms) < 2 {
+		return model.DetectedPattern{}, false
+	}
+
+	return model.DetectedPattern{
+		ID:          "pattern-strategy",
+		Name:        "Strategy / Policy Pattern",
+		Category:    model.PatternBehavioral,
+		Confidence:  0.86,
+		Description: "Encapsulates swappable business algorithms and validation rules behind unified strategy contracts, enabling dynamic runtime switching.",
+		Evidence: []string{
+			fmt.Sprintf("Identified %d strategy/policy implementations", len(strategySyms)),
+			fmt.Sprintf("Sample policies: %s", strings.Join(strategySyms[:min(len(strategySyms), 4)], ", ")),
+		},
+		Files:     nil,
+		Tradeoffs: "Complies with Open-Closed Principle (OCP); requires client awareness of strategy selection parameters.",
+	}, true
+}
+
+func detectObserverPattern(files []model.FileNode, syms []model.Symbol) (model.DetectedPattern, bool) {
+	var observerSyms []string
+
+	for _, s := range syms {
+		name := strings.ToLower(s.Name)
+		if strings.Contains(name, "observer") || strings.Contains(name, "listener") ||
+			strings.Contains(name, "callback") || strings.Contains(name, "hook") {
+			observerSyms = append(observerSyms, s.QualifiedName)
+		}
+	}
+
+	if len(observerSyms) < 2 {
+		return model.DetectedPattern{}, false
+	}
+
+	return model.DetectedPattern{
+		ID:          "pattern-observer",
+		Name:        "Observer / Listener Callback Pattern",
+		Category:    model.PatternBehavioral,
+		Confidence:  0.84,
+		Description: "Defines one-to-many subscription mechanics where state changes in subject components automatically notify and update registered observers.",
+		Evidence: []string{
+			fmt.Sprintf("Discovered %d observer/listener callback hooks", len(observerSyms)),
+		},
+		Files:     nil,
+		Tradeoffs: "Decouples event publishers from consumer reactions; requires correlation IDs for asynchronous sequence debugging.",
+	}, true
+}
+
+func generateRecommendations(tiers []model.SystemTier, dataFlow []model.DataFlowHop, bottlenecks []string) []model.ArchRecommendation {
+	recs := make([]model.ArchRecommendation, 0)
+
+	// 1. Check for layer bypass (Client direct to Storage)
+	for _, hop := range dataFlow {
+		if hop.FromTier == model.TierClient && hop.ToTier == model.TierStorage {
+			recs = append(recs, model.ArchRecommendation{
+				ID:          "rec-decouple-client-storage",
+				Title:       "Eliminate Direct Client-to-Storage Layer Bypass",
+				Category:    "Decoupling",
+				Severity:    model.SevHigh,
+				Description: fmt.Sprintf("Observed %d direct queries from Client Tier to Storage Tier bypassing API and domain service boundaries.", hop.CallCount),
+				ActionSteps: []string{
+					"Route all client mutations and lookups through API presentation controllers",
+					"Enforce domain authorization and input validation in application services",
+					"Never expose raw SQL queries or database driver bindings to client views",
+				},
+				Impact: "Hardens application security, eliminates unauthorized DB access risks, and restores strict Clean Architecture boundary isolation.",
+			})
+			break
+		}
+	}
+
+	// 2. Check for high storage query density (Caching recommendation)
+	for _, hop := range dataFlow {
+		if hop.ToTier == model.TierStorage && hop.CallCount >= 20 {
+			recs = append(recs, model.ArchRecommendation{
+				ID:          "rec-storage-cache",
+				Title:       "Introduce In-Memory Cache for Heavy Storage Reads",
+				Category:    "Caching",
+				Severity:    model.SevMedium,
+				Description: fmt.Sprintf("High query density observed between %s and Storage (%d cross-boundary calls).", hop.FromTier, hop.CallCount),
+				ActionSteps: []string{
+					"Deploy an in-memory Redis or LRU cache ahead of repetitive database read operations",
+					"Adopt Cache-Aside pattern with TTL expiration for high-read, low-write entities",
+					"Implement cache key invalidation hooks on storage write operations",
+				},
+				Impact: "Reduces database I/O pressure by up to 60-80% and cuts median request latency to single-digit milliseconds.",
+			})
+			break
+		}
+	}
+
+	// 3. Check for high synchronous orchestration (Async offloading)
+	for _, hop := range dataFlow {
+		if hop.FromTier == model.TierAPI && hop.ToTier == model.TierService && hop.CallCount >= 30 {
+			recs = append(recs, model.ArchRecommendation{
+				ID:          "rec-async-offloading",
+				Title:       "Offload Intensive Orchestration to Asynchronous Queue Workers",
+				Category:    "Scalability",
+				Severity:    model.SevMedium,
+				Description: fmt.Sprintf("API layer performs %d synchronous orchestration calls in the request path.", hop.CallCount),
+				ActionSteps: []string{
+					"Identify non-critical operations (email alerts, metrics aggregation, PDF generation, re-indexing)",
+					"Publish background events to the Async Messaging tier via lightweight channel workers",
+					"Return HTTP 202 Accepted with status polling for long-running workflows",
+				},
+				Impact: "Keeps HTTP request handlers non-blocking and prevents API gateway timeouts under spike traffic.",
+			})
+			break
+		}
+	}
+
+	// 4. Check for monolithic tier concentration
+	for _, t := range tiers {
+		if t.ID == model.TierService && t.FileCount >= 25 {
+			recs = append(recs, model.ArchRecommendation{
+				ID:          "rec-service-modularity",
+				Title:       "Decompose Application Services into Bounded Contexts",
+				Category:    "Modularity",
+				Severity:    model.SevLow,
+				Description: fmt.Sprintf("Application & Domain Services tier currently aggregates %d files into a single tier domain.", t.FileCount),
+				ActionSteps: []string{
+					"Partition large service modules into explicit DDD sub-domains (e.g. Identity, Billing, Engine)",
+					"Define clean Go interface contracts between distinct bounded domains",
+					"Use package-private visibility to prevent cross-domain leaking",
+				},
+				Impact: "Improves code readability, accelerates unit test suite velocity, and facilitates parallel engineering workflows.",
+			})
+			break
+		}
+	}
+
+	// 5. If no issues found, provide general resilience guideline
+	if len(recs) == 0 {
+		recs = append(recs, model.ArchRecommendation{
+			ID:          "rec-resilience-monitoring",
+			Title:       "Maintain Boundary Discipline & Instrument Distributed Traces",
+			Category:    "Resilience",
+			Severity:    model.SevLow,
+			Description: "Codebase demonstrates clean architectural layering with no critical layer bypasses detected.",
+			ActionSteps: []string{
+				"Maintain CI/CD quality gate checks (codedna check) on every pull request",
+				"Propagate correlation trace IDs across all inter-tier service hops",
+			},
+			Impact: "Sustains long-term maintainability and guarantees zero architectural regressions over time.",
+		})
+	}
+
+	return recs
 }
 
 func detectKeyEntrypoints(files []model.FileNode, syms []model.Symbol) []string {
