@@ -15,6 +15,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![React Flow](https://img.shields.io/badge/React_Flow-11.11-FF0072?logo=react)](https://reactflow.dev/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)](https://www.sqlite.org/)
+[![Website](https://img.shields.io/badge/Website-0xzahed.github.io%2Fcodedna-38bdf8?logo=googlechrome&logoColor=white)](https://0xzahed.github.io/codedna/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 <p align="center">
@@ -35,6 +36,7 @@
 > ```
 > Then navigate into any code repository and run **`codedna serve`**!
 
+[🌐 Live Website](https://0xzahed.github.io/codedna/) •
 [⚡ Quick Start](#-quick-start) •
 [🎯 The Problem](#-the-problem) •
 [⚡ The CodeDNA Engine](#-the-codedna-engine-architecture) •
