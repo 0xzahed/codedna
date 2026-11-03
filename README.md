@@ -37,6 +37,7 @@
 > Then navigate into any code repository and run **`codedna serve`**!
 
 [🌐 Live Website](https://0xzahed.github.io/codedna/) •
+[📦 Installation](#-installation) •
 [⚡ Quick Start](#-quick-start) •
 [🎯 The Problem](#-the-problem) •
 [⚡ The CodeDNA Engine](#-the-codedna-engine-architecture) •
@@ -47,13 +48,159 @@
 [💻 CLI Reference](#-cli-commands--flag-matrix) •
 [🏗️ Architecture](#-system-architecture) •
 [🚀 Benchmarks](#-performance-benchmarks) •
-[📦 Installation](#-installation) •
 [🛠️ Project Structure](#-project-structure) •
 [🔒 Security & Privacy](#-security-local-first-guarantee--privacy) •
 [🤝 Contributing](#-contributing) •
 [📄 License](#-license)
 
 </div>
+
+---
+
+## 📦 Installation
+
+CodeDNA follows a **Native-First, Zero-Dependency** installation priority. Docker is completely optional and never mandatory.
+
+### Option 1: Native 1-Line Installer (Linux & macOS — Recommended)
+
+Installs the standalone `codedna` binary into `~/.local/bin` (no sudo required) with automatic platform detection and SHA256 verification:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash
+```
+
+Once installed, simply `cd` into **any project directory** and run:
+```bash
+codedna serve
+```
+
+---
+
+### Option 2: Windows PowerShell 1-Liner (Windows 10 & 11)
+
+In PowerShell, run:
+
+```powershell
+irm https://raw.githubusercontent.com/0xzahed/codedna/main/install.ps1 | iex
+```
+
+This installs `codedna.exe` to `$HOME\.codedna\bin`, sets up your User PATH environment variable, and bundles the interactive web studio.
+
+---
+
+### Option 3: Pre-compiled Binaries (GitHub Releases)
+
+Download and unpack the release bundle matching your operating system and CPU architecture from the [GitHub Releases](https://github.com/0xzahed/codedna/releases) page:
+
+```bash
+# Linux x86_64
+mkdir -p ~/.codedna ~/.local/bin
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-linux-amd64.tar.gz | tar -xz -C ~/.codedna
+ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
+
+# macOS Apple Silicon (M1/M2/M3/M4)
+mkdir -p ~/.codedna ~/.local/bin
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-arm64.tar.gz | tar -xz -C ~/.codedna
+ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
+
+# macOS Intel
+mkdir -p ~/.codedna ~/.local/bin
+curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-amd64.tar.gz | tar -xz -C ~/.codedna
+ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
+
+# Checksum Verification
+curl -sSLO https://github.com/0xzahed/codedna/releases/latest/download/SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS
+```
+
+---
+
+### Option 4: Via Go Install
+
+If you have Go 1.21+ installed:
+
+```bash
+go install github.com/0xzahed/codedna/cmd/codedna@latest
+```
+
+---
+
+### Option 5: Build from Source
+
+```bash
+git clone https://github.com/0xzahed/codedna.git
+cd codedna
+
+# Build Go CLI binary and compile Next.js dashboard
+make all
+
+# Or build CLI binary only
+make build-cli
+
+# Run test suite to verify installation
+make test
+```
+
+---
+
+### 🐳 Optional Docker Mode (Containerized Isolation)
+
+If you prefer containerized isolation without installing local binaries:
+
+```bash
+# Using CodeDNA CLI (auto-delegates to Docker)
+codedna docker --port 8080
+
+# Or pure Docker 1-Liner
+docker run -d -p 8080:8080 -v $(pwd):/workspace ghcr.io/0xzahed/codedna:latest
+```
+
+---
+
+### 🩺 Environment Diagnostics & Health Check
+
+Run `codedna doctor` anytime to check your environment, binary location, PATH setup, port availability, and toolchains:
+
+```bash
+codedna doctor
+```
+
+---
+
+### 🗑️ Uninstallation
+
+To safely remove CodeDNA and its local cache:
+
+```bash
+# Via CLI
+codedna uninstall -y
+
+# Or via Shell Installer
+curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash -s -- --uninstall
+
+# Or on Windows PowerShell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/0xzahed/codedna/main/install.ps1 | iex -Uninstall"
+```
+
+---
+
+## ⚡ Quick Start
+
+Get your living codebase topology running in under 30 seconds:
+
+### Step 1: Install CodeDNA
+Run the native 1-liner installer for your platform above.
+
+### Step 2: Navigate to Any Project & Launch Studio
+```bash
+cd /path/to/any-project
+codedna serve
+```
+
+### Step 3: Explore Living Software Intelligence
+Open **[http://localhost:8080](http://localhost:8080)** in your browser.
+
+CodeDNA instantly scans your codebase in parallel, constructs the SQLite AST intelligence graph, discovers architecture tiers & GoF patterns, and renders the interactive React Flow canvas with real-time SSE hot-reloading!
 
 ---
 
@@ -177,7 +324,7 @@ Parsing: [██═════════════════════�
 
 ---
 
-## 🎮 Quick Start & Commands
+## 🎮 CLI Cheatsheet & Core Workflows
 
 ### CLI Command Overview
 
@@ -450,133 +597,6 @@ CodeDNA's multi-core parallel pipeline delivers industry-leading throughput by s
 * **Binary Size (Compiled):** ~19.4 MB (completely statically linked, zero dynamic library dependencies)
 * **Cold Daemon Startup Time:** `< 12 ms`
 * **Local Database Storage:** `< 3 MB` SQLite storage footprint per 15,000 indexed symbols
-
----
-
-## 📦 Installation
-
-CodeDNA follows a **Native-First, Zero-Dependency** installation priority. Docker is completely optional and never mandatory.
-
-### Option 1: Native 1-Line Installer (Linux & macOS — Recommended)
-
-Installs the standalone `codedna` binary into `~/.local/bin` (no sudo required) with automatic platform detection and SHA256 verification:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash
-```
-
-Once installed, simply `cd` into **any project directory** and run:
-```bash
-codedna serve
-```
-
----
-
-### Option 2: Windows PowerShell 1-Liner (Windows 10 & 11)
-
-In PowerShell, run:
-
-```powershell
-irm https://raw.githubusercontent.com/0xzahed/codedna/main/install.ps1 | iex
-```
-
-This installs `codedna.exe` to `$HOME\.codedna\bin`, sets up your User PATH environment variable, and bundles the interactive web studio.
-
----
-
-### Option 3: Pre-compiled Binaries (GitHub Releases)
-
-Download and unpack the release bundle matching your operating system and CPU architecture from the [GitHub Releases](https://github.com/0xzahed/codedna/releases) page:
-
-```bash
-# Linux x86_64
-mkdir -p ~/.codedna ~/.local/bin
-curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-linux-amd64.tar.gz | tar -xz -C ~/.codedna
-ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
-
-# macOS Apple Silicon (M1/M2/M3/M4)
-mkdir -p ~/.codedna ~/.local/bin
-curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-arm64.tar.gz | tar -xz -C ~/.codedna
-ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
-
-# macOS Intel
-mkdir -p ~/.codedna ~/.local/bin
-curl -sSL https://github.com/0xzahed/codedna/releases/latest/download/codedna-darwin-amd64.tar.gz | tar -xz -C ~/.codedna
-ln -sf ~/.codedna/bin/codedna ~/.local/bin/codedna
-
-# Checksum Verification
-curl -sSLO https://github.com/0xzahed/codedna/releases/latest/download/SHA256SUMS
-sha256sum --ignore-missing -c SHA256SUMS
-```
-
----
-
-### Option 4: Via Go Install
-
-If you have Go 1.21+ installed:
-
-```bash
-go install github.com/0xzahed/codedna/cmd/codedna@latest
-```
-
----
-
-### Option 5: Build from Source
-
-```bash
-git clone https://github.com/0xzahed/codedna.git
-cd codedna
-
-# Build Go CLI binary and compile Next.js dashboard
-make all
-
-# Or build CLI binary only
-make build-cli
-
-# Run test suite to verify installation
-make test
-```
-
----
-
-### 🐳 Optional Docker Mode (Containerized Isolation)
-
-If you prefer containerized isolation without installing local binaries:
-
-```bash
-# Using CodeDNA CLI (auto-delegates to Docker)
-codedna docker --port 8080
-
-# Or pure Docker 1-Liner
-docker run -d -p 8080:8080 -v $(pwd):/workspace ghcr.io/0xzahed/codedna:latest
-```
-
----
-
-### 🩺 Environment Diagnostics & Health Check
-
-Run `codedna doctor` anytime to check your environment, binary location, PATH setup, port availability, and toolchains:
-
-```bash
-codedna doctor
-```
-
----
-
-### 🗑️ Uninstallation
-
-To safely remove CodeDNA and its local cache:
-
-```bash
-# Via CLI
-codedna uninstall -y
-
-# Or via Shell Installer
-curl -fsSL https://raw.githubusercontent.com/0xzahed/codedna/main/install.sh | bash -s -- --uninstall
-
-# Or on Windows PowerShell
-powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/0xzahed/codedna/main/install.ps1 | iex -Uninstall"
-```
 
 ---
 
